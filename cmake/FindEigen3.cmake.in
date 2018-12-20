@@ -1,0 +1,11 @@
+############################################################
+# Finds the Eigen3 library built inside SpatialDyn
+#
+# Copyright 2018. All Rights Reserved.
+#
+# Created: October 19, 2018
+# Authors: Toki Migimatsu
+############################################################
+
+
+find_package(Eigen3 3.3.5 REQUIRED PATHS @CMAKE_BINARY_DIR@/Eigen3/build)

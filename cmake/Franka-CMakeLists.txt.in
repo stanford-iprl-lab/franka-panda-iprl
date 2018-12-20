@@ -1,0 +1,29 @@
+############################################################
+# CMakeLists to download libfranka
+#
+# Copyright 2018. All Rights Reserved.
+#
+# Created: September 16, 2018
+# Authors: Toki Migimatsu
+############################################################
+
+cmake_minimum_required(VERSION 3.6)
+
+project(Franka-download NONE)
+
+include(ExternalProject)
+ExternalProject_Add(Franka
+    # Directories
+    PREFIX ${CMAKE_BINARY_DIR}/libfranka
+    SOURCE_DIR ${FRANKA_PANDA_EXT_DIR}/libfranka.git
+    BINARY_DIR ${CMAKE_BINARY_DIR}/libfranka/build
+    # Download
+    GIT_REPOSITORY https://github.com/frankaemika/libfranka.git
+    GIT_TAG 0.5.0
+    # Configure
+    CMAKE_ARGS -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF
+    # Make
+    BUILD_COMMAND ${FRANKA_PANDA_CMAKE_DIR}/ncpu.sh | xargs -I {} make -j{}
+    # Install
+    # INSTALL_COMMAND ""
+)

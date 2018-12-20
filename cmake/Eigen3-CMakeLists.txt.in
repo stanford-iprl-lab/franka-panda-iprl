@@ -1,0 +1,29 @@
+############################################################
+# CMakeLists to download Eigen3
+#
+# Copyright 2018. All Rights Reserved.
+#
+# Created: September 16, 2018
+# Authors: Toki Migimatsu
+############################################################
+
+cmake_minimum_required(VERSION 3.6)
+
+project(Eigen3-download NONE)
+
+include(ExternalProject)
+ExternalProject_Add(Eigen3
+    # Directories
+    PREFIX ${CMAKE_BINARY_DIR}/Eigen3
+    SOURCE_DIR ${FRANKA_PANDA_EXT_DIR}/eigen.git
+    BINARY_DIR ${CMAKE_BINARY_DIR}/Eigen3/build
+    # Download
+    GIT_REPOSITORY https://github.com/eigenteam/eigen-git-mirror.git
+    GIT_TAG 3.3.5
+    # Configure
+    CMAKE_ARGS -DBUILD_TESTING=OFF
+    # Make
+    BUILD_COMMAND ${FRANKA_PANDA_CMAKE_DIR}/ncpu.sh | xargs -I {} make -j{}
+    # Install
+    INSTALL_COMMAND ""
+)
