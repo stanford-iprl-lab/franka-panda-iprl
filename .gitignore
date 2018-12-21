@@ -2,6 +2,8 @@ bin/*
 build/*
 external/*
 compile_commands.json
+*.swp
+*.rdb
 
 # Prerequisites
 *.d
