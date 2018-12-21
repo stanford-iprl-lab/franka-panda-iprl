@@ -137,7 +137,7 @@ control:
 
     # Collision torque thresholds during acceleration [Nm]
     # Either a single double or an array of size 7
-    tau_collision_acc: 20.
+    tau_collision_acc: 100.
 
     # Contact torque thresholds [Nm]
     # Either a single double or an array of size 7
@@ -145,7 +145,7 @@ control:
 
     # Collision torque thresholds [Nm]
     # Either a single double or an array of size 7
-    tau_collision: 10.
+    tau_collision: 50.
 
     # Contact force thresholds during acceleration [N, Nm]
     # Either a single double or an array of size 6
@@ -153,7 +153,7 @@ control:
 
     # Collision force thresholds during acceleration [N, Nm]
     # Either a single double or an array of size 6
-    f_collision_acc: 20.
+    f_collision_acc: 100.
 
     # Contact force thresholds [N, Nm]
     # Either a single double or an array of size 6
@@ -161,5 +161,5 @@ control:
 
     # Collision force thresholds [N, Nm]
     # Either a single double or an array of size 6
-    f_collision: 10.
+    f_collision: 50.
 

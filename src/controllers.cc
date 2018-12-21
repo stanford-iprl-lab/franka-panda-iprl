@@ -66,6 +66,10 @@ std::function<franka::Torques(const franka::RobotState&, franka::Duration)>
 CreateTorqueController(const Args& args, const std::shared_ptr<SharedMemory>& globals,
                        const franka::Model& model) {
   return [&args, globals, &model](const franka::RobotState& state, franka::Duration dt) -> franka::Torques {
+    if (!*globals->runloop) {
+      throw std::runtime_error("TorqueController(): SIGINT.");
+    }
+
     // Set sensor values
     RedisSetSensorValues(globals, model, state, args.publish_dynamics);
 
@@ -100,6 +104,10 @@ std::function<franka::CartesianPose(const franka::RobotState&, franka::Duration)
 CreateCartesianPoseController(const Args& args, const std::shared_ptr<SharedMemory>& globals,
                               const franka::Model& model) {
   return [&args, globals, &model](const franka::RobotState& state, franka::Duration dt) -> franka::CartesianPose {
+    if (!*globals->runloop) {
+      throw std::runtime_error("TorqueController(): SIGINT.");
+    }
+
     // Set sensor values
     RedisSetSensorValues(globals, model, state, args.publish_dynamics);
 

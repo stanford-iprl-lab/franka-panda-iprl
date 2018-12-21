@@ -72,7 +72,7 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   // Set loop timer to 1kHz (to match Franka Panda's control frequency)
   SpatialDyn::Timer timer(1000);
 
-  while (g_runloop) {
+  while (*globals->runloop) {
     try {
 
       timer.Sleep();
@@ -125,12 +125,13 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   }
 }
 
-void RunFrankaController(const Args& args, std::shared_ptr<FrankaDriver::SharedMemory>& globals,
+void RunFrankaController(const Args& args, const std::shared_ptr<FrankaDriver::SharedMemory>& globals,
                          franka::Robot& robot, const franka::Model& model) {
   FrankaDriver::ControlMode control_mode = globals->control_mode;
-  while (g_runloop) {
+  while (globals->runloop) {
     try {
       switch (control_mode) {
+        case FrankaDriver::ControlMode::FLOATING:
         case FrankaDriver::ControlMode::TORQUE:
           robot.control(FrankaDriver::CreateTorqueController(args, globals, model),
                         args.limit_rate, args.lowpass_freq_cutoff);  // Blocking
@@ -181,7 +182,8 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, stop);
 
     // Create communication interface between Redis and robot threads
-    std::shared_ptr<FrankaDriver::SharedMemory> globals;
+    auto globals = std::make_shared<FrankaDriver::SharedMemory>();
+    globals->runloop = &g_runloop;
 
     // Run Redis thread
     redis_thread = std::thread(FrankaDriver::RedisThread, args, globals);

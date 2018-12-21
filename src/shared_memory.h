@@ -11,8 +11,9 @@
 #ifndef FRANKA_DRIVER_SHARED_MEMORY_H_
 #define FRANKA_DRIVER_SHARED_MEMORY_H_
 
-#include <atomic>  // std::atomic
-#include <array>   // std::array
+#include <atomic>    // std::atomic
+#include <array>     // std::array
+#include <signal.h>  // sig_atomic_t
 
 #include "controllers.h"
 
@@ -34,6 +35,8 @@ struct SharedMemory {
   std::atomic<std::array<double, 7>> gravity      = {{{0.}}};
 
   std::atomic<ControlMode> control_mode = {ControlMode::FLOATING};
+
+  volatile sig_atomic_t* runloop = nullptr;
 };
 
 }  // namespace FrankaDriver
