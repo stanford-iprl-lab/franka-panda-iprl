@@ -98,7 +98,7 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
       redis_client.set(KEY_TAU,  ArrayToString(globals->tau.load(),  args.use_json));
       redis_client.set(KEY_DTAU, ArrayToString(globals->dtau.load(), args.use_json));
       if (args.publish_dynamics) {
-        redis_client.set(KEY_MASS_MATRIX, ArrayToString(globals->mass_matrix.load(), args.use_json));
+        redis_client.set(KEY_MASS_MATRIX, MatrixToString<7,7>(globals->mass_matrix.load(), args.use_json));
         redis_client.set(KEY_CORIOLIS,    ArrayToString(globals->coriolis.load(), args.use_json));
         redis_client.set(KEY_GRAVITY,     ArrayToString(globals->gravity.load(), args.use_json));
       }

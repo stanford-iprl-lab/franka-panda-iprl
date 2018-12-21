@@ -43,6 +43,18 @@ std::array<double, Dim> StringToArray(const std::string str, bool use_json) {
   return arr;
 }
 
+template<int Rows, int Cols, unsigned long Dim>
+std::string MatrixToString(const std::array<double, Dim>& arr, bool use_json) {
+  static_assert(Rows * Cols == Dim, "Rows * Cols must equal Dim");
+
+  Eigen::Map<const Eigen::MatrixXd> map(arr.data(), Rows, Cols);
+  if (use_json) {
+    EigenUtils::EncodeJson(map);
+  }
+  return EigenUtils::EncodeMatlab(map);
+}
+
+
 std::array<double, 16> StringToTransform(const std::string str, bool use_json) {
   std::array<double, 16> arr;
   Eigen::Map<Eigen::MatrixXd> map(arr.data(), 4, 4);
