@@ -93,7 +93,7 @@ CreateTorqueController(const Args& args, const std::shared_ptr<SharedMemory>& gl
 
     } else if (control_mode == ControlMode::FLOATING) {
       // Floating mode
-      return std::array<double, 7>{0.};
+      return std::array<double, 7>{{0., 0., 0., 0., 0., 0., 0.}};
     }
 
     throw SwitchControllerException("torque");

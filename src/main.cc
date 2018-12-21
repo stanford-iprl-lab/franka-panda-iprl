@@ -107,6 +107,7 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
       redis_client.commit();
 
       // Wait for command futures
+      future_command.wait();
       switch (control_mode) {
         case ControlMode::CARTESIAN_POSE:
           globals->pose_command = StringToTransform(future_command.get(), args.use_json);

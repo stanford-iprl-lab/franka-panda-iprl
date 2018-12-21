@@ -129,6 +129,22 @@ RedisClient& RedisClient::get(const std::string& key,
   return *this;
 }
 
+template<>
+RedisClient& RedisClient::get<std::string>(const std::string& key,
+    const std::function<void(std::string)>& reply_callback,
+    const std::function<void(const std::string&)>& error_callback) {
+  cpp_redis::client::get(key, [key, reply_callback, error_callback](cpp_redis::reply& reply) {
+    if (!reply.is_string()) {
+      if (error_callback) {
+        error_callback("RedisClient::get(): Failed to get string value from key: " + key + ".");
+      }
+      return;
+    }
+    reply_callback(reply.as_string());
+  });
+  return *this;
+}
+
 template<typename T>
 std::future<T> RedisClient::get(const std::string& key) {
   auto promise = std::make_shared<std::promise<T>>();
