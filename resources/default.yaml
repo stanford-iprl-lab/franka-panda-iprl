@@ -62,20 +62,20 @@ redis:
   publish_dynamics: true
 
 
-###################
-# Load parameters #
-###################
+###########################
+# End-effector parameters #
+###########################
 
-load:
+ee:
 
   # Load mass [kg]
-  mass: 0.
+  mass: 0.73
 
   # Load center of mass in the flange frame [m]
-  com: [0., 0., 0.]
+  com: [-0.00999999977648258, 0., 0.0299999993294477]
 
   # Load inertia [kg m^2]
-  inertia: {xx: 0., yy: 0., zz: 0., xy: 0., xz: 0., yz: 0.}
+  inertia: {xx: 0.00100000004749745, yy: 0.00249999994412065, zz: 0.00170000002253801, xy: 0., xz: 0., yz: 0.}
 
 
 ######################
