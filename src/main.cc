@@ -53,12 +53,18 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   const std::string KEY_DQ           = args.key_prefix + args.key_dq;
   const std::string KEY_TAU          = args.key_prefix + args.key_tau;
   const std::string KEY_DTAU         = args.key_prefix + args.key_dtau;
+  const std::string KEY_M_EE         = args.key_prefix + args.key_m_ee;
+  const std::string KEY_COM_EE       = args.key_prefix + args.key_com_ee;
+  const std::string KEY_I_COM_EE     = args.key_prefix + args.key_I_com_ee;
   const std::string KEY_MASS_MATRIX  = args.key_prefix + args.key_mass_matrix;
   const std::string KEY_CORIOLIS     = args.key_prefix + args.key_coriolis;
   const std::string KEY_GRAVITY      = args.key_prefix + args.key_gravity;
   const std::string KEY_TAU_COMMAND  = args.key_prefix + args.key_tau_command;
   const std::string KEY_POSE_COMMAND = args.key_prefix + args.key_pose_command;
   const std::string KEY_CONTROL_MODE = args.key_prefix + args.key_control_mode;
+  const std::string KEY_M_LOAD       = args.key_prefix + args.key_m_load;
+  const std::string KEY_COM_LOAD     = args.key_prefix + args.key_com_load;
+  const std::string KEY_I_COM_LOAD   = args.key_prefix + args.key_I_com_load;
 
   // Connect to Redis
   SpatialDyn::RedisClient redis_client;
@@ -97,6 +103,15 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
       redis_client.set(KEY_DQ,   ArrayToString(globals->dq.load(),   args.use_json));
       redis_client.set(KEY_TAU,  ArrayToString(globals->tau.load(),  args.use_json));
       redis_client.set(KEY_DTAU, ArrayToString(globals->dtau.load(), args.use_json));
+
+      redis_client.set(KEY_M_EE,     std::to_string(globals->m_ee.load()));
+      redis_client.set(KEY_COM_EE,   ArrayToString(globals->com_ee.load(),   args.use_json));
+      redis_client.set(KEY_I_COM_EE, ArrayToString(globals->I_com_ee.load(), args.use_json));
+
+      redis_client.set(KEY_M_LOAD,     std::to_string(globals->m_load.load()));
+      redis_client.set(KEY_COM_LOAD,   ArrayToString(globals->com_load.load(),   args.use_json));
+      redis_client.set(KEY_I_COM_LOAD, ArrayToString(globals->I_com_load.load(), args.use_json));
+
       if (args.publish_dynamics) {
         redis_client.set(KEY_MASS_MATRIX, MatrixToString<7,7>(globals->mass_matrix.load(), args.use_json));
         redis_client.set(KEY_CORIOLIS,    ArrayToString(globals->coriolis.load(), args.use_json));

@@ -81,10 +81,16 @@ Args ParseYaml(const char* filename) {
   args.key_q_command    = yaml["redis"]["keys"]["q_command"].as<std::string>();
   args.key_dq_command   = yaml["redis"]["keys"]["dq_command"].as<std::string>();
   args.key_control_mode = yaml["redis"]["keys"]["control_mode"].as<std::string>();
+  args.key_m_load       = yaml["redis"]["keys"]["m_load"].as<std::string>();
+  args.key_com_load     = yaml["redis"]["keys"]["com_load"].as<std::string>();
+  args.key_I_com_load   = yaml["redis"]["keys"]["I_com_load"].as<std::string>();
   args.key_q            = yaml["redis"]["keys"]["q"].as<std::string>();
   args.key_dq           = yaml["redis"]["keys"]["dq"].as<std::string>();
   args.key_tau          = yaml["redis"]["keys"]["tau"].as<std::string>();
   args.key_dtau         = yaml["redis"]["keys"]["dtau"].as<std::string>();
+  args.key_m_ee         = yaml["redis"]["keys"]["m_ee"].as<std::string>();
+  args.key_com_ee       = yaml["redis"]["keys"]["com_ee"].as<std::string>();
+  args.key_I_com_ee     = yaml["redis"]["keys"]["I_com_ee"].as<std::string>();
   args.key_mass_matrix  = yaml["redis"]["keys"]["mass_matrix"].as<std::string>();
   args.key_coriolis     = yaml["redis"]["keys"]["coriolis"].as<std::string>();
   args.key_gravity      = yaml["redis"]["keys"]["gravity"].as<std::string>();
@@ -197,10 +203,16 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  key_q_command: " << args.key_q_command << std::endl
      << "  key_dq_command: " << args.key_dq_command << std::endl
      << "  key_control_mode: " << args.key_control_mode << std::endl
+     << "  key_m_load: " << args.key_m_load << std::endl
+     << "  key_com_load: " << args.key_com_load << std::endl
+     << "  key_I_com_load: " << args.key_I_com_load << std::endl
      << "  key_q: " << args.key_q << std::endl
      << "  key_dq: " << args.key_dq << std::endl
      << "  key_tau: " << args.key_tau << std::endl
      << "  key_dtau: " << args.key_dtau << std::endl
+     << "  key_m_ee: " << args.key_m_ee << std::endl
+     << "  key_com_ee: " << args.key_com_ee << std::endl
+     << "  key_I_com_ee: " << args.key_I_com_ee << std::endl
      << "  key_mass_matrix: " << args.key_mass_matrix << std::endl
      << "  key_coriolis: " << args.key_coriolis << std::endl
      << "  key_gravity: " << args.key_gravity << std::endl

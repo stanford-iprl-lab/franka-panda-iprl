@@ -12,7 +12,7 @@
 cmake_minimum_required(VERSION 3.6)
 
 # Define project
-project(franka_panda_driver VERSION 1.0.0 LANGUAGES CXX)
+project(franka_panda VERSION 1.0.0 LANGUAGES CXX)
 
 # Set CMake flags
 set(CMAKE_CXX_STANDARD 14)
@@ -23,6 +23,7 @@ if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 
 # Define directories
+set(FRANKA_PANDA_LIB FrankaPanda)
 set(FRANKA_PANDA_BIN franka_panda_driver)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(FRANKA_PANDA_CMAKE_DIR ${PROJECT_SOURCE_DIR}/cmake)
@@ -30,11 +31,7 @@ set(FRANKA_PANDA_EXT_DIR ${PROJECT_SOURCE_DIR}/external)
 set(FRANKA_PANDA_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(FRANKA_PANDA_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 
-# # Create FrankaPanda library
-# add_library(${FRANKA_PANDA_LIB} SHARED)
-
-# # Create namespaced alias for use inside the build tree
-# add_library(${FRANKA_PANDA_LIB}::${FRANKA_PANDA_LIB} ALIAS ${FRANKA_PANDA_LIB})
+# Create Franka Panda driver
 add_executable(${FRANKA_PANDA_BIN})
 
 # Set compiler options
@@ -104,18 +101,50 @@ target_link_libraries(${FRANKA_PANDA_BIN}
 # Set include directories
 target_include_directories(${FRANKA_PANDA_BIN}
     PRIVATE
-        ${FRANKA_PANDA_INCLUDE_DIR}/FrankaPanda
         ${FRANKA_PANDA_SRC_DIR})
 
 # Attach sources
-target_sources(${FRANKA_PANDA_BIN} PRIVATE
-    ${FRANKA_PANDA_SRC_DIR}/main.cc
-    ${FRANKA_PANDA_SRC_DIR}/args.cc
-    ${FRANKA_PANDA_SRC_DIR}/controllers.cc
+target_sources(${FRANKA_PANDA_BIN}
+    PRIVATE
+        ${FRANKA_PANDA_SRC_DIR}/main.cc
+        ${FRANKA_PANDA_SRC_DIR}/args.cc
+        ${FRANKA_PANDA_SRC_DIR}/controllers.cc
+)
+
+# Create FrankaPanda library
+add_library(${FRANKA_PANDA_LIB} SHARED)
+
+# Set compiler options
+target_compile_options(${FRANKA_PANDA_BIN} PRIVATE
+    $<$<CXX_COMPILER_ID:GNU>:-Wall>
+    $<$<CONFIG:RELEASE>:-O3>
+)
+
+# Link internal model library
+find_library(FCI_MODELS_LIB fcimodels REQUIRED PATHS ${FRANKA_PANDA_EXT_DIR})
+target_link_libraries(${FRANKA_PANDA_LIB}
+    PUBLIC
+        Eigen3::Eigen
+    PRIVATE
+        ${FCI_MODELS_LIB}
+)
+
+# Set include directories
+target_include_directories(${FRANKA_PANDA_LIB}
+    PUBLIC
+        ${FRANKA_PANDA_INCLUDE_DIR}
+    PRIVATE
+        ${FRANKA_PANDA_EXT_DIR}/libfranka.git/src
+)
+
+# Attach sources
+target_sources(${FRANKA_PANDA_LIB}
+    PRIVATE
+        ${FRANKA_PANDA_SRC_DIR}/model.cc
 )
 
 # # Use GNUInstalDirs to install ibraries into correct locations on all platforms
-# include(GNUInstallDirs)
+include(GNUInstallDirs)
 
 # set(FRANKA_PANDA_TARGETS ${FRANKA_PANDA_LIB}Targets)
 # set(FRANKA_PANDA_CONFIG ${FRANKA_PANDA_LIB}Config)

@@ -34,12 +34,18 @@ struct Args {
   std::string key_q_command    = "control::q";
   std::string key_dq_command   = "control::dq";
   std::string key_control_mode = "control::mode";
+  std::string key_m_load       = "control::m_load";
+  std::string key_com_load     = "control::com_load";
+  std::string key_I_com_load   = "control::I_com_load";
 
   // Outgoing keys
   std::string key_q    = "sensor::q";
   std::string key_dq   = "sensor::dq";
   std::string key_tau  = "sensor::tau";
   std::string key_dtau = "sensor::dtau";
+  std::string key_m_ee     = "model::m_ee";
+  std::string key_com_ee   = "model::com_ee";
+  std::string key_I_com_ee = "model::I_com_ee";
   std::string key_mass_matrix = "model::mass_matrix";
   std::string key_coriolis    = "model::coriolis";
   std::string key_gravity     = "model::gravity";

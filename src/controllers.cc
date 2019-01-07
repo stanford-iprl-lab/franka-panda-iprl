@@ -55,6 +55,12 @@ void RedisSetSensorValues(const std::shared_ptr<SharedMemory>& globals,
   globals->dq   = state.dq;
   globals->tau  = state.tau_J;
   globals->dtau = state.dtau_J;
+  globals->m_ee = state.m_ee;
+  globals->com_ee = state.F_x_Cee;
+  globals->I_com_ee = state.I_ee;
+  globals->m_load = state.m_load;
+  globals->com_load = state.F_x_Cload;
+  globals->I_com_load = state.I_load;
   if (publish_dynamics) {
     globals->mass_matrix = model.mass(state);
     globals->coriolis    = model.coriolis(state);

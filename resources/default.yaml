@@ -36,12 +36,19 @@ redis:
     q_command:    "control::q"
     dq_command:   "control::dq"
     control_mode: "control::mode"
+    m_load:       "control::m_load"
+    com_load:     "control::com_load"
+    I_com_load:   "control::I_com_load"
 
     # Keys published by driver
     q:    "sensor::q"
     dq:   "sensor::dq"
     tau:  "sensor::tau"
     dtau: "sensor::dtau"
+
+    m_ee:     "model::m_ee"
+    com_ee:   "model::com_ee"
+    I_com_ee: "model::I_com_ee"
 
     # Keys published by driver if publish_dynamics is true
     mass_matrix: "model::mass_matrix"
