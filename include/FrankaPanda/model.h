@@ -28,16 +28,15 @@ class Model {
   void set_dq(Eigen::Ref<const Eigen::VectorXd> dq);
 
   double m_load() const { return m_load_; }
-  void set_m_load(double m_load) { m_load_ = m_load; }
+  void set_m_load(double m) { m_load_ = m; }
 
   const Eigen::Vector3d& com_load() const { return com_load_; }
-  void set_com_load(Eigen::Ref<const Eigen::Vector3d> com_load) { com_load_ = com_load; }
+  void set_com_load(Eigen::Ref<const Eigen::Vector3d> com) { com_load_ = com; }
 
-  const Eigen::Matrix3d& I_com_load() const { return I_com_load_; }
-  void set_I_com_load(Eigen::Ref<const Eigen::Matrix3d> I_com_load) { I_com_load_ = I_com_load; }
+  Eigen::Matrix<double,6,1> I_com_load() const;
+  void set_I_com_load(Eigen::Ref<const Eigen::Matrix<double,6,1>> I_com_flat);
 
-  Eigen::Matrix<double,6,1> I_com_load_flat() const;
-  void set_I_com_load_flat(Eigen::Ref<const Eigen::Matrix<double,6,1>> I_com_load_flat);
+  const Eigen::Matrix3d& I_com_load_matrix() const { return I_com_load_; }
 
   const Eigen::Vector3d& g() const { return g_; }
 
@@ -51,25 +50,13 @@ class Model {
   Eigen::Vector3d com_load_ = Eigen::Vector3d::Zero();
   Eigen::Matrix3d I_com_load_ = Eigen::Matrix3d::Zero();
 
-  Eigen::Vector3d g_ = Eigen::Vector3d(-9.81, 0., 0.);
+  Eigen::Vector3d g_ = Eigen::Vector3d(0., 0., -9.81);
 
 };
 
-Eigen::Vector3d Position(const Model& model, int link = -1,
-                         const Eigen::Vector3d& offset = Eigen::Vector3d::Zero());
+Eigen::Isometry3d CartesianPose(const Model& model, int link = -1);
 
-Eigen::Quaterniond Orientation(const Model& model, int link = -1);
-
-Eigen::Isometry3d CartesianPose(const Model& model, int link = -1,
-                                const Eigen::Vector3d& offset = Eigen::Vector3d::Zero());
-
-Eigen::Matrix<double,6,-1> Jacobian(const Model& model, int link = -1,
-                                    const Eigen::Vector3d& offset = Eigen::Vector3d::Zero());
-
-Eigen::Matrix<double,3,-1> LinearJacobian(const Model& model, int link = -1,
-                                          const Eigen::Vector3d& offset = Eigen::Vector3d::Zero());
-
-Eigen::Matrix<double,3,-1> AngularJacobian(const Model& model, int link = -1);
+Eigen::Matrix<double,6,-1> Jacobian(const Model& model, int link = -1);
 
 Eigen::MatrixXd Inertia(const Model& model);
 

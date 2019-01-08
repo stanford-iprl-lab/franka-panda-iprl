@@ -31,28 +31,20 @@ void Model::set_dq(Eigen::Ref<const Eigen::VectorXd> dq) {
   dq_ = dq;
 }
 
-Eigen::Matrix<double,6,1> Model::I_com_load_flat() const {
+Eigen::Matrix<double,6,1> Model::I_com_load() const {
   Eigen::Matrix<double,6,1> I_result;
   I_result << I_com_load_(0, 0), I_com_load_(1, 1), I_com_load_(2, 2),
               I_com_load_(0, 1), I_com_load_(0, 2), I_com_load_(1, 2);
   return I_result;
 }
 
-void Model::set_I_com_load_flat(Eigen::Ref<const Eigen::Matrix<double,6,1>> I_com_load_flat) {
-  I_com_load_ << I_com_load_flat(0), I_com_load_flat(3), I_com_load_flat(4),
-                 I_com_load_flat(3), I_com_load_flat(1), I_com_load_flat(5),
-                 I_com_load_flat(4), I_com_load_flat(5), I_com_load_flat(2);
+void Model::set_I_com_load(Eigen::Ref<const Eigen::Matrix<double,6,1>> I_com_flat) {
+  I_com_load_ << I_com_flat(0), I_com_flat(3), I_com_flat(4),
+                 I_com_flat(3), I_com_flat(1), I_com_flat(5),
+                 I_com_flat(4), I_com_flat(5), I_com_flat(2);
 }
 
-Eigen::Vector3d Position(const Model& model, int link, const Eigen::Vector3d& offset) {
-  return CartesianPose(model, link, offset).translation();
-}
-
-Eigen::Quaterniond Orientation(const Model& model, int link) {
-  return Eigen::Quaterniond(CartesianPose(model, link).linear());
-}
-
-Eigen::Isometry3d CartesianPose(const Model& model, int link, const Eigen::Vector3d& offset) {
+Eigen::Isometry3d CartesianPose(const Model& model, int link) {
   if (link < 0) link += model.dof();
 
   Eigen::Matrix4d T_output;
@@ -81,11 +73,10 @@ Eigen::Isometry3d CartesianPose(const Model& model, int link, const Eigen::Vecto
   }
 
   return Eigen::Translation3d(T_output.block<3,1>(0,3)) *
-         Eigen::Quaterniond(T_output.topLeftCorner<3,3>()) *
-         Eigen::Translation3d(offset);
+         Eigen::Quaterniond(T_output.topLeftCorner<3,3>());
 }
 
-Eigen::Matrix<double,6,-1> Jacobian(const Model& model, int link, const Eigen::Vector3d& offset) {
+Eigen::Matrix<double,6,-1> Jacobian(const Model& model, int link) {
   if (link < 0) link += model.dof();
 
   Eigen::Matrix<double,6,-1> J_output(6, model.dof());
@@ -116,24 +107,16 @@ Eigen::Matrix<double,6,-1> Jacobian(const Model& model, int link, const Eigen::V
   return J_output;
 }
 
-Eigen::Matrix<double,3,-1> LinearJacobian(const Model& model, int link, const Eigen::Vector3d& offset) {
-  return Jacobian(model, link, offset).topRows<3>();
-}
-
-Eigen::Matrix<double,3,-1> AngularJacobian(const Model& model, int link) {
-  return Jacobian(model, link).bottomRows<3>();
-}
-
 Eigen::MatrixXd Inertia(const Model& model) {
   Eigen::MatrixXd A_output(model.dof(), model.dof());
-  M_NE(model.q().data(), model.I_com_load().data(), model.m_load(),
+  M_NE(model.q().data(), model.I_com_load_matrix().data(), model.m_load(),
        model.com_load().data(), A_output.data());
   return A_output;
 }
 
 Eigen::VectorXd CentrifugalCoriolis(const Model& model) {
   Eigen::VectorXd V_output(model.dof());
-  c_NE(model.q().data(), model.dq().data(), model.I_com_load().data(),
+  c_NE(model.q().data(), model.dq().data(), model.I_com_load_matrix().data(),
        model.m_load(), model.com_load().data(), V_output.data());
   return V_output;
 }

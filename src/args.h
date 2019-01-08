@@ -27,18 +27,20 @@ struct Args {
   // Redis keys
   std::string key_prefix = "franka_panda::";
 
-  // Incoming keys
+  // Incoming GET keys
   std::string key_tau_command  = "control::tau";
   std::string key_pose_command = "control::pose";
   std::string key_dx_command   = "control::dx";
   std::string key_q_command    = "control::q";
   std::string key_dq_command   = "control::dq";
   std::string key_control_mode = "control::mode";
+
+  // Incoming SUB keys
   std::string key_m_load       = "control::m_load";
   std::string key_com_load     = "control::com_load";
   std::string key_I_com_load   = "control::I_com_load";
 
-  // Outgoing keys
+  // Outgoing SET keys
   std::string key_q    = "sensor::q";
   std::string key_dq   = "sensor::dq";
   std::string key_tau  = "sensor::tau";
@@ -46,12 +48,9 @@ struct Args {
   std::string key_m_ee     = "model::m_ee";
   std::string key_com_ee   = "model::com_ee";
   std::string key_I_com_ee = "model::I_com_ee";
-  std::string key_mass_matrix = "model::mass_matrix";
-  std::string key_coriolis    = "model::coriolis";
-  std::string key_gravity     = "model::gravity";
+  std::string key_driver_status = "driver::status";
 
   bool use_json = false;
-  bool publish_dynamics = true;
 
   // Load parameters
   double load_mass = 0.;

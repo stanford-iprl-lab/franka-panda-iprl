@@ -1,0 +1,19 @@
+############################################################
+# CMake config for the FrankaPanda library
+#
+# Copyright 2018. All Rights Reserved.
+#
+# Created: September 16, 2018
+# Authors: Toki Migimatsu
+############################################################
+
+get_filename_component(SPATIAL_DYN_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+list(APPEND CMAKE_MODULE_PATH ${SPATIAL_DYN_CMAKE_DIR})
+find_dependency(Eigen3 3.3.5 REQUIRED)
+list(REMOVE_AT CMAKE_MODULE_PATH -1)
+
+if(NOT TARGET FrankaPanda::FrankaPanda)
+    include("${SPATIAL_DYN_CMAKE_DIR}/FrankaPandaTargets.cmake")
+endif()

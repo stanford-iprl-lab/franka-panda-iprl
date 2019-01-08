@@ -49,8 +49,7 @@ std::string ControlModeToString(ControlMode mode) {
 }
 
 void RedisSetSensorValues(const std::shared_ptr<SharedMemory>& globals,
-                          const franka::Model& model, const franka::RobotState& state,
-                          bool publish_dynamics) {
+                          const franka::Model& model, const franka::RobotState& state) {
   globals->q    = state.q;
   globals->dq   = state.dq;
   globals->tau  = state.tau_J;
@@ -58,14 +57,9 @@ void RedisSetSensorValues(const std::shared_ptr<SharedMemory>& globals,
   globals->m_ee = state.m_ee;
   globals->com_ee = state.F_x_Cee;
   globals->I_com_ee = state.I_ee;
-  globals->m_load = state.m_load;
-  globals->com_load = state.F_x_Cload;
-  globals->I_com_load = state.I_load;
-  if (publish_dynamics) {
-    globals->mass_matrix = model.mass(state);
-    globals->coriolis    = model.coriolis(state);
-    globals->gravity     = model.gravity(state);
-  }
+  // globals->m_load = state.m_load;
+  // globals->com_load = state.F_x_Cload;
+  // globals->I_com_load = state.I_load;
 }
 
 std::function<franka::Torques(const franka::RobotState&, franka::Duration)>
@@ -77,7 +71,7 @@ CreateTorqueController(const Args& args, const std::shared_ptr<SharedMemory>& gl
     }
 
     // Set sensor values
-    RedisSetSensorValues(globals, model, state, args.publish_dynamics);
+    RedisSetSensorValues(globals, model, state);
 
     // Get control mode
     ControlMode control_mode = globals->control_mode;
@@ -88,8 +82,7 @@ CreateTorqueController(const Args& args, const std::shared_ptr<SharedMemory>& gl
 
       // Cancel gravity from Franka Panda driver torques
       if (!args.compensate_gravity) {
-        std::array<double, 7> gravity = args.publish_dynamics ? globals->gravity.load()
-                                                              : model.gravity(state);
+        std::array<double, 7> gravity = model.gravity(state);
         for (size_t i = 0; i < tau_command.size(); i++) {
           tau_command[i] -= gravity[i];
         }
@@ -115,7 +108,7 @@ CreateCartesianPoseController(const Args& args, const std::shared_ptr<SharedMemo
     }
 
     // Set sensor values
-    RedisSetSensorValues(globals, model, state, args.publish_dynamics);
+    RedisSetSensorValues(globals, model, state);
 
     // Get command torques
     if (globals->control_mode != ControlMode::CARTESIAN_POSE) {

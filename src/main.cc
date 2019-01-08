@@ -48,6 +48,13 @@ void stop(int signal) { g_runloop = false; }
 
 namespace FrankaDriver {
 
+enum class Status { RUNNING, OFF };
+
+const std::string& StatusToString(Status status) {
+  static const std::map<Status, std::string> kStatusToString = {{Status::RUNNING, "running"}, {Status::OFF, "off"}};
+  return kStatusToString.at(status);
+}
+
 void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   const std::string KEY_Q            = args.key_prefix + args.key_q;
   const std::string KEY_DQ           = args.key_prefix + args.key_dq;
@@ -56,15 +63,13 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   const std::string KEY_M_EE         = args.key_prefix + args.key_m_ee;
   const std::string KEY_COM_EE       = args.key_prefix + args.key_com_ee;
   const std::string KEY_I_COM_EE     = args.key_prefix + args.key_I_com_ee;
-  const std::string KEY_MASS_MATRIX  = args.key_prefix + args.key_mass_matrix;
-  const std::string KEY_CORIOLIS     = args.key_prefix + args.key_coriolis;
-  const std::string KEY_GRAVITY      = args.key_prefix + args.key_gravity;
   const std::string KEY_TAU_COMMAND  = args.key_prefix + args.key_tau_command;
   const std::string KEY_POSE_COMMAND = args.key_prefix + args.key_pose_command;
   const std::string KEY_CONTROL_MODE = args.key_prefix + args.key_control_mode;
   const std::string KEY_M_LOAD       = args.key_prefix + args.key_m_load;
   const std::string KEY_COM_LOAD     = args.key_prefix + args.key_com_load;
   const std::string KEY_I_COM_LOAD   = args.key_prefix + args.key_I_com_load;
+  const std::string KEY_DRIVER_STATUS = args.key_prefix + args.key_driver_status;
 
   // Connect to Redis
   SpatialDyn::RedisClient redis_client;
@@ -73,6 +78,11 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   // Set default Redis keys
   redis_client.set(KEY_CONTROL_MODE, ControlModeToString(globals->control_mode));
   redis_client.set(KEY_TAU_COMMAND, ArrayToString(globals->tau_command.load(), args.use_json));
+  redis_client.set(KEY_DRIVER_STATUS, StatusToString(Status::RUNNING));
+  // redis_client.set(KEY_M_LOAD,     std::to_string(globals->m_load.load()));
+  // redis_client.set(KEY_COM_LOAD,   ArrayToString(globals->com_load.load(),   args.use_json));
+  // redis_client.set(KEY_I_COM_LOAD, ArrayToString(globals->I_com_load.load(), args.use_json));
+
   redis_client.sync_commit();
 
   // Set loop timer to 1kHz (to match Franka Panda's control frequency)
@@ -108,21 +118,10 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
       redis_client.set(KEY_COM_EE,   ArrayToString(globals->com_ee.load(),   args.use_json));
       redis_client.set(KEY_I_COM_EE, ArrayToString(globals->I_com_ee.load(), args.use_json));
 
-      redis_client.set(KEY_M_LOAD,     std::to_string(globals->m_load.load()));
-      redis_client.set(KEY_COM_LOAD,   ArrayToString(globals->com_load.load(),   args.use_json));
-      redis_client.set(KEY_I_COM_LOAD, ArrayToString(globals->I_com_load.load(), args.use_json));
-
-      if (args.publish_dynamics) {
-        redis_client.set(KEY_MASS_MATRIX, MatrixToString<7,7>(globals->mass_matrix.load(), args.use_json));
-        redis_client.set(KEY_CORIOLIS,    ArrayToString(globals->coriolis.load(), args.use_json));
-        redis_client.set(KEY_GRAVITY,     ArrayToString(globals->gravity.load(), args.use_json));
-      }
-
       // Commit Redis commands
       redis_client.commit();
 
       // Wait for command futures
-      future_command.wait();
       switch (control_mode) {
         case ControlMode::CARTESIAN_POSE:
           globals->pose_command = StringToTransform(future_command.get(), args.use_json);
@@ -139,6 +138,11 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
       std::cerr << e.what() << std::endl;
     }
   }
+
+  // Clear Redis keys
+  redis_client.set(KEY_CONTROL_MODE, ControlModeToString(ControlMode::FLOATING));
+  redis_client.set(KEY_TAU_COMMAND, ArrayToString(std::array<double, 7>{{0.}}, args.use_json));
+  redis_client.set(KEY_DRIVER_STATUS, StatusToString(Status::OFF));
 }
 
 void RunFrankaController(const Args& args, const std::shared_ptr<FrankaDriver::SharedMemory>& globals,

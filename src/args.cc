@@ -91,12 +91,9 @@ Args ParseYaml(const char* filename) {
   args.key_m_ee         = yaml["redis"]["keys"]["m_ee"].as<std::string>();
   args.key_com_ee       = yaml["redis"]["keys"]["com_ee"].as<std::string>();
   args.key_I_com_ee     = yaml["redis"]["keys"]["I_com_ee"].as<std::string>();
-  args.key_mass_matrix  = yaml["redis"]["keys"]["mass_matrix"].as<std::string>();
-  args.key_coriolis     = yaml["redis"]["keys"]["coriolis"].as<std::string>();
-  args.key_gravity      = yaml["redis"]["keys"]["gravity"].as<std::string>();
+  args.key_driver_status = yaml["redis"]["keys"]["driver_status"].as<std::string>();
 
   args.use_json         = yaml["redis"]["use_json"].as<bool>();
-  args.publish_dynamics = yaml["redis"]["publish_dynamics"].as<bool>();
 
   // Load parameters
   args.load_mass = yaml["load"]["mass"].as<double>();
@@ -213,11 +210,8 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  key_m_ee: " << args.key_m_ee << std::endl
      << "  key_com_ee: " << args.key_com_ee << std::endl
      << "  key_I_com_ee: " << args.key_I_com_ee << std::endl
-     << "  key_mass_matrix: " << args.key_mass_matrix << std::endl
-     << "  key_coriolis: " << args.key_coriolis << std::endl
-     << "  key_gravity: " << args.key_gravity << std::endl
+     << "  key_driver_status: " << args.key_driver_status << std::endl
      << "  use_json: " << args.use_json << std::endl
-     << "  publish_dynamics: " << args.publish_dynamics << std::endl
      << "  load_mass: " << args.load_mass << std::endl
      << "  load_com: " << args.load_com << std::endl
      << "  load_inertia: " << args.load_inertia << std::endl

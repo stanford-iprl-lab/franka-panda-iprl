@@ -40,42 +40,34 @@ redis:
     com_load:     "control::com_load"
     I_com_load:   "control::I_com_load"
 
-    # Keys published by driver
-    q:    "sensor::q"
-    dq:   "sensor::dq"
-    tau:  "sensor::tau"
-    dtau: "sensor::dtau"
-
+    # Keys written by driver
+    q:        "sensor::q"
+    dq:       "sensor::dq"
+    tau:      "sensor::tau"
+    dtau:     "sensor::dtau"
     m_ee:     "model::m_ee"
     com_ee:   "model::com_ee"
     I_com_ee: "model::I_com_ee"
-
-    # Keys published by driver if publish_dynamics is true
-    mass_matrix: "model::mass_matrix"
-    coriolis:    "model::coriolis"
-    gravity:     "model::gravity"
+    driver_status: "driver::status"
 
   # Use JSON or Matlab formatting for matrices in Redis
   use_json: false
 
-  # Publish mass, Coriolis, gravity
-  publish_dynamics: true
 
+###################
+# Load parameters #
+###################
 
-###########################
-# End-effector parameters #
-###########################
-
-ee:
+load:
 
   # Load mass [kg]
-  mass: 0.73
+  mass: 0.
 
   # Load center of mass in the flange frame [m]
-  com: [-0.00999999977648258, 0., 0.0299999993294477]
+  com: [0., 0., 0.]
 
   # Load inertia [kg m^2]
-  inertia: {xx: 0.00100000004749745, yy: 0.00249999994412065, zz: 0.00170000002253801, xy: 0., xz: 0., yz: 0.}
+  inertia: {xx: 0., yy: 0., zz: 0., xy: 0., xz: 0., yz: 0.}
 
 
 ######################

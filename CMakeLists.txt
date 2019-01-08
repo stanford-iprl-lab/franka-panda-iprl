@@ -113,6 +113,7 @@ target_sources(${FRANKA_PANDA_BIN}
 
 # Create FrankaPanda library
 add_library(${FRANKA_PANDA_LIB} SHARED)
+add_library(${FRANKA_PANDA_LIB}::${FRANKA_PANDA_LIB} ALIAS ${FRANKA_PANDA_LIB})
 
 # Set compiler options
 target_compile_options(${FRANKA_PANDA_BIN} PRIVATE
@@ -146,9 +147,9 @@ target_sources(${FRANKA_PANDA_LIB}
 # # Use GNUInstalDirs to install ibraries into correct locations on all platforms
 include(GNUInstallDirs)
 
-# set(FRANKA_PANDA_TARGETS ${FRANKA_PANDA_LIB}Targets)
-# set(FRANKA_PANDA_CONFIG ${FRANKA_PANDA_LIB}Config)
-# set(FRANKA_PANDA_CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/${FRANKA_PANDA_LIB})
+set(FRANKA_PANDA_TARGETS ${FRANKA_PANDA_LIB}Targets)
+set(FRANKA_PANDA_CONFIG ${FRANKA_PANDA_LIB}Config)
+set(FRANKA_PANDA_CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/${FRANKA_PANDA_LIB})
 
 # # Install the library
 # install(TARGETS ${FRANKA_PANDA_LIB}
@@ -193,8 +194,8 @@ include(GNUInstallDirs)
 #     add_subdirectory(tests)
 # endif()
 
-# # Build python wrapper
-# add_subdirectory(${FRANKA_PANDA_SRC_DIR}/python)
+# Build python wrapper
+add_subdirectory(${FRANKA_PANDA_SRC_DIR}/python)
 
 # export(TARGETS ${FRANKA_PANDA_LIB}
 #     NAMESPACE ${FRANKA_PANDA_LIB}::

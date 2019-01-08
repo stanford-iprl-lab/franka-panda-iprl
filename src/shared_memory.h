@@ -30,17 +30,13 @@ struct SharedMemory {
   std::atomic<std::array<double, 7>> tau  = {{{0.}}};
   std::atomic<std::array<double, 7>> dtau = {{{0.}}};
 
-  std::atomic<std::array<double, 49>> mass_matrix = {{{0.}}};
-  std::atomic<std::array<double, 7>> coriolis     = {{{0.}}};
-  std::atomic<std::array<double, 7>> gravity      = {{{0.}}};
-
   std::atomic<double> m_ee                    = {0.};
   std::atomic<std::array<double, 3>> com_ee   = {{{0.}}};
   std::atomic<std::array<double, 9>> I_com_ee = {{{0.}}};
 
-  std::atomic<double> m_load                    = {0.};
-  std::atomic<std::array<double, 3>> com_load   = {{{0.}}};
-  std::atomic<std::array<double, 9>> I_com_load = {{{0.}}};
+  // std::atomic<double> m_load                    = {0.};
+  // std::atomic<std::array<double, 3>> com_load   = {{{0.}}};
+  // std::atomic<std::array<double, 9>> I_com_load = {{{0.}}};
 
   std::atomic<ControlMode> control_mode = {ControlMode::FLOATING};
 
