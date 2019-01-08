@@ -26,6 +26,10 @@ def sign(x, epsilon=1e-2):
     else:
         return 0
 
+def dsigmoid(x, sigma, a):
+    sigma_sq = sigma * sigma
+    return -x / (sigma_cb * sqrt(2*np.pi))
+
 def main():
     global redis_db
     redis_db = redis.Redis()
@@ -34,7 +38,7 @@ def main():
 
     robot = frankapanda.Model()
 
-    kp_joint = 10
+    kp_joint = 40
     kv_joint = 0#13
     redis_db.set("franka_panda::control::kp_joint", kp_joint)
     redis_db.set("franka_panda::control::kv_joint", kv_joint)
@@ -43,12 +47,13 @@ def main():
     robot.dq = np.array(list(map(float, redis_db.get("franka_panda::sensor::dq").decode("utf-8").strip().split(" "))))
 
     q_des = np.array(robot.q)
-    q_des[6] = 0
-    test_joint = True
-    idx_joint = 5
+    #q_des[5] = 0
+    test_joint = False
+    idx_joint = 4
     sign_joint = np.sign(robot.q[idx_joint])
 
     i = 0
+    t_start = time.time()
     while redis_db.get("franka_panda::driver::status").decode("utf8") == "running":
         time.sleep(0.001)
 
@@ -62,12 +67,23 @@ def main():
         A = frankapanda.inertia(robot)
         V = frankapanda.centrifugal_coriolis(robot)
         G = frankapanda.gravity(robot)
+        #A[6,6] *= 40
 
-        ddq = -kp_joint * (robot.q - q_des) - kv_joint * robot.dq
+        q_err = robot.q - q_des
+        dq_err = np.array(robot.dq)
+        if test_joint:
+            q_err[idx_joint] = 0.
+            dq_err[idx_joint] = 0.
+        ddq = -kp_joint * q_err - kv_joint * dq_err
 
         tau_cmd = A.dot(ddq)
+        #print(ddq[-3:], np.diag(A)[-3:], np.diag(A)[-3:] * ddq[-3:])
         if (abs(tau_cmd[6]) < 0.54):
-            tau_cmd[6] = sign(tau_cmd[6], epsilon=0.1) * 0.54
+            tau_cmd[6] = sign(tau_cmd[6], epsilon=0.0001) * 0.54
+        #if (abs(tau_cmd[5]) < 0.54):
+        #    tau_cmd[5] = sign(tau_cmd[5], epsilon=0.0001) * 0.54
+        #if (abs(tau_cmd[4]) < 0.7):
+        #    tau_cmd[4] = sign(tau_cmd[4], epsilon=0.0001) * 0.7
 
         if test_joint:
             tau_cmd[idx_joint] = -sign_joint * min(1., 0.1 * (time.time() - t_start))
