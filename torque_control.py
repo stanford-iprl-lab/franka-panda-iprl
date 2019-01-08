@@ -18,6 +18,14 @@ def signal_handler(sig, frame):
         print("Cleared torques and set control mode to 'floating'.")
     sys.exit(0)
 
+def sign(x, epsilon=1e-2):
+    if x > epsilon:
+        return 1
+    elif x < -epsilon:
+        return -1
+    else:
+        return 0
+
 def main():
     global redis_db
     redis_db = redis.Redis()
@@ -36,7 +44,9 @@ def main():
 
     q_des = np.array(robot.q)
     q_des[6] = 0
-    stage = 0
+    test_joint = True
+    idx_joint = 5
+    sign_joint = np.sign(robot.q[idx_joint])
 
     i = 0
     while redis_db.get("franka_panda::driver::status").decode("utf8") == "running":
@@ -55,23 +65,15 @@ def main():
 
         ddq = -kp_joint * (robot.q - q_des) - kv_joint * robot.dq
 
-        #A[-3,-3] += 0.07
-        #A[-2,-2] += 0.07
-        #A[-1,-1] += 0.07
         tau_cmd = A.dot(ddq)
-        if (abs(robot.q[6] - q_des[6]) > 1e-2 and abs(tau_cmd[6]) < 0.54):
-            tau_cmd[6] = np.sign(tau_cmd[6]) * 0.54
-            #print(tau_cmd[6])
+        if (abs(tau_cmd[6]) < 0.54):
+            tau_cmd[6] = sign(tau_cmd[6], epsilon=0.1) * 0.54
 
-        if stage == 1:
-            #tau_cmd[6] = -0.53
-            #tau_cmd[6] = 0.53#min(1., 0.1 * (time.time() - t_start))
-            #if robot.dq[6] > 1e-1:
-            #    print(robot.dq[6], tau_cmd[6])
-            #if -robot.dq[6] > 1e-1:
-            #    print(robot.dq[6], tau_cmd[6])
-            #    break
-            pass
+        if test_joint:
+            tau_cmd[idx_joint] = -sign_joint * min(1., 0.1 * (time.time() - t_start))
+            if abs(robot.dq[idx_joint]) > 1e-1:
+               print(robot.dq[idx_joint], tau_cmd[idx_joint])
+               break
 
         t = time.time()
         redis_db.set("franka_panda::control::tau", " ".join(map(str, tau_cmd.tolist())))
