@@ -24,7 +24,7 @@ class Model {
   const Eigen::VectorXd& q() const { return q_; }
   void set_q(Eigen::Ref<const Eigen::VectorXd> q);
 
-  const Eigen::VectorXd& dq() const { return q_; }
+  const Eigen::VectorXd& dq() const { return dq_; }
   void set_dq(Eigen::Ref<const Eigen::VectorXd> dq);
 
   double m_load() const { return m_load_; }

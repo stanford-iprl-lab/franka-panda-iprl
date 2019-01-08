@@ -23,6 +23,7 @@
 #include <cpp_redis/cpp_redis>
 #include <Eigen/Eigen>
 #include <yaml-cpp/yaml.h>
+#include <franka/exception.h>
 #include <franka/robot.h>
 #include <franka/model.h>
 
@@ -143,6 +144,7 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   redis_client.set(KEY_CONTROL_MODE, ControlModeToString(ControlMode::FLOATING));
   redis_client.set(KEY_TAU_COMMAND, ArrayToString(std::array<double, 7>{{0.}}, args.use_json));
   redis_client.set(KEY_DRIVER_STATUS, StatusToString(Status::OFF));
+  redis_client.sync_commit();
 }
 
 void RunFrankaController(const Args& args, const std::shared_ptr<FrankaDriver::SharedMemory>& globals,
@@ -192,7 +194,14 @@ int main(int argc, char* argv[]) {
                                args.tau_contact_thresholds,     args.tau_collision_thresholds,
                                args.f_contact_thresholds_acc,   args.f_collision_thresholds_acc,
                                args.f_contact_thresholds,       args.f_collision_thresholds);
-    robot.setJointImpedance(args.K_joint);
+    try {
+      robot.setJointImpedance(args.K_joint);
+    } catch (franka::CommandException& e) {
+      std::cerr << e.what() << std::endl;
+      std::cerr << std::endl << "Make sure the robot isn't close to any joint limits and the e-stop is released." << std::endl;
+      g_runloop = false;
+      return 0;
+    }
     robot.setCartesianImpedance(args.K_cart);
     robot.setEE(args.T_ee_to_flange);
     robot.setK(args.T_op_point_to_ee);

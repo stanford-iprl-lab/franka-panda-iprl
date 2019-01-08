@@ -25,10 +25,10 @@ COLORS = COLORS + COLORS
 SUBPLOT_START = [0, 7]
 
 # Number of seconds to display
-TIME_WINDOW = 10
+TIME_WINDOW = 60
 
 # Y axis limits
-Y_LIM = [-5, 5]
+Y_LIM = [-2, 2]
 
 
 class RealtimePlotter:
@@ -60,7 +60,7 @@ class RealtimePlotter:
                 data = []
                 try:
                     for key in REDIS_KEYS:
-                        str_data = redis_client.get(REDIS_KEY)
+                        str_data = redis_client.get(key).decode('utf8')
                         t_curr = time.time()
 
                         # TODO: Remove - for debugging
@@ -72,7 +72,7 @@ class RealtimePlotter:
                         else:
                             data += [float(el.strip()) for el in str_data.split(" ")]
                 except:
-                    print("Invalid Redis key: {0} = {1}".format(REDIS_KEY, str_data))
+                    print("Invalid Redis key: {0} = {1}".format(key, str_data))
                     time.sleep(1.0)
                     continue
 
@@ -94,7 +94,7 @@ class RealtimePlotter:
 
                 # Update data
                 self.time[self.channel][self.idx] = t_curr - t_loop
-                self.data[self.channel][:,self.idx] = data
+                self.data[self.channel][:,self.idx] = np.array(data)
 
                 # Reserve more space if idx reaches window_size
                 if self.idx >= self.size_window - 1:
@@ -120,10 +120,10 @@ class RealtimePlotter:
         lines = []
         # Add lines for current channel
         for i in range(num_subplots):
-            lines += [axes[i].plot([], [], COLORS[j], label=LABELS[j], animated=True)[0] for j in range(subplots[i],subplots[i+1])]
+            lines += [axes[i].plot([], [], color=COLORS[j], label=LABELS[j], animated=True)[0] for j in range(subplots[i],subplots[i+1])]
         # Add lines for old channel
         for i in range(num_subplots):
-            lines += [axes[i].plot([], [], COLORS[j] + ":", animated=True)[0] for j in range(subplots[i],subplots[i+1])]
+            lines += [axes[i].plot([], [], color=COLORS[j], linestyle=":", animated=True)[0] for j in range(subplots[i],subplots[i+1])]
         for ax in axes:
             ax.legend()
             ax.set_xlim([0, TIME_WINDOW])
@@ -145,12 +145,12 @@ class RealtimePlotter:
             idx_old_start = np.searchsorted(self.time[old_channel][:idx_old_end], t_curr, side="right")
 
             for i, line in enumerate(lines):
-                if i < 6:
+                if i < len(LABELS):
                     # Plot the current channel up to the current timestamp
                     line.set_data(self.time[self.channel][:idx_curr], self.data[self.channel][i,:idx_curr])
                 else:
                     # Plot the old channel from the current timestamp
-                    line.set_data(self.time[old_channel][idx_old_start:idx_old_end], self.data[old_channel][i-6,idx_old_start:idx_old_end])
+                    line.set_data(self.time[old_channel][idx_old_start:idx_old_end], self.data[old_channel][i-len(LABELS),idx_old_start:idx_old_end])
 
             self.channel_lock.release()
             return lines
