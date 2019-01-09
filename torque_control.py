@@ -26,9 +26,13 @@ def sign(x, epsilon=1e-2):
     else:
         return 0
 
-def dsigmoid(x, sigma, a):
-    sigma_sq = sigma * sigma
-    return -x / (sigma_cb * sqrt(2*np.pi))
+def filter(x, threshold, epsilon):
+    if abs(x) < threshold:
+        if abs(x) < epsilon:
+            dx = x / epsilon - np.sign(x)
+            return -np.sign(x) * threshold * (dx*dx - 1)
+        return np.sign(x) * threshold
+    return x
 
 def main():
     global redis_db
@@ -77,9 +81,12 @@ def main():
         ddq = -kp_joint * q_err - kv_joint * dq_err
 
         tau_cmd = A.dot(ddq)
+        tau_cmd[6] = filter(tau_cmd[6], 0.7, 0.01)
+        tau_cmd[5] = filter(tau_cmd[5], 0.7, 0.01)
+        tau_cmd[4] = filter(tau_cmd[4], 0.7, 0.1)
         #print(ddq[-3:], np.diag(A)[-3:], np.diag(A)[-3:] * ddq[-3:])
-        if (abs(tau_cmd[6]) < 0.54):
-            tau_cmd[6] = sign(tau_cmd[6], epsilon=0.0001) * 0.54
+        #if (abs(tau_cmd[6]) < 0.54):
+        #    tau_cmd[6] = sign(tau_cmd[6], epsilon=0.0001) * 0.54
         #if (abs(tau_cmd[5]) < 0.54):
         #    tau_cmd[5] = sign(tau_cmd[5], epsilon=0.0001) * 0.54
         #if (abs(tau_cmd[4]) < 0.7):
