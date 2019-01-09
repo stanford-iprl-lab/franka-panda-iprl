@@ -7,8 +7,7 @@ name = "pypi"
 
 [packages]
 numpy = "*"
-frankapanda = {editable = true, path = "."}
 redis = "*"
-#frankapanda = {version = "*",editable = true}
+frankapanda = {editable = true, path = "."}
 
 [requires]

@@ -133,7 +133,8 @@ target_link_libraries(${FRANKA_PANDA_LIB}
 # Set include directories
 target_include_directories(${FRANKA_PANDA_LIB}
     PUBLIC
-        ${FRANKA_PANDA_INCLUDE_DIR}
+        $<INSTALL_INTERFACE:include>
+        $<BUILD_INTERFACE:${FRANKA_PANDA_INCLUDE_DIR}>
     PRIVATE
         ${FRANKA_PANDA_EXT_DIR}/libfranka.git/src
 )
@@ -151,56 +152,50 @@ set(FRANKA_PANDA_TARGETS ${FRANKA_PANDA_LIB}Targets)
 set(FRANKA_PANDA_CONFIG ${FRANKA_PANDA_LIB}Config)
 set(FRANKA_PANDA_CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/${FRANKA_PANDA_LIB})
 
-# # Install the library
-# install(TARGETS ${FRANKA_PANDA_LIB}
-#     EXPORT ${FRANKA_PANDA_TARGETS}
-#     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-# )
+# Install the library
+install(TARGETS ${FRANKA_PANDA_LIB}
+    EXPORT ${FRANKA_PANDA_TARGETS}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 
-# # Install the headers
-# install(DIRECTORY ${FRANKA_PANDA_INCLUDE_DIR} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+# Install the headers
+install(DIRECTORY ${FRANKA_PANDA_INCLUDE_DIR} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-# # Export targets to Targets.cmake
-# install(EXPORT ${FRANKA_PANDA_TARGETS}
-#     DESTINATION ${FRANKA_PANDA_CONFIG_INSTALL_DIR}
-#     NAMESPACE ${FRANKA_PANDA_LIB}::
-#     FILE ${FRANKA_PANDA_TARGETS}.cmake
-# )
+# Export targets to Targets.cmake
+install(EXPORT ${FRANKA_PANDA_TARGETS}
+    DESTINATION ${FRANKA_PANDA_CONFIG_INSTALL_DIR}
+    NAMESPACE ${FRANKA_PANDA_LIB}::
+    FILE ${FRANKA_PANDA_TARGETS}.cmake
+)
 
-# # Create ConfigVersion.cmake
-# include(CMakePackageConfigHelpers)
-# write_basic_package_version_file(${CMAKE_BINARY_DIR}/${FRANKA_PANDA_CONFIG}Version.cmake
-#     VERSION ${PROJECT_VERSION}
-#     COMPATIBILITY AnyNewerVersion
-# )
+# Create ConfigVersion.cmake
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(${CMAKE_BINARY_DIR}/${FRANKA_PANDA_CONFIG}Version.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
 
-# # Create Config.cmake
-# configure_package_config_file(${FRANKA_PANDA_CMAKE_DIR}/${FRANKA_PANDA_CONFIG}.cmake.in
-#     ${CMAKE_BINARY_DIR}/${FRANKA_PANDA_CONFIG}.cmake
-#     INSTALL_DESTINATION ${FRANKA_PANDA_CONFIG_INSTALL_DIR})
+# Create Config.cmake
+configure_package_config_file(${FRANKA_PANDA_CMAKE_DIR}/${FRANKA_PANDA_CONFIG}.cmake.in
+    ${CMAKE_BINARY_DIR}/${FRANKA_PANDA_CONFIG}.cmake
+    INSTALL_DESTINATION ${FRANKA_PANDA_CONFIG_INSTALL_DIR})
 
-# # Install config script files
-# install(FILES
-#     ${CMAKE_BINARY_DIR}/${FRANKA_PANDA_CONFIG}.cmake
-#     ${CMAKE_BINARY_DIR}/${FRANKA_PANDA_CONFIG}Version.cmake
-#     DESTINATION ${FRANKA_PANDA_CONFIG_INSTALL_DIR}
-# )
-
-# # Build tests
-# include(CTest)
-# if(BUILD_TESTING)
-#     add_subdirectory(tests)
-# endif()
+# Install config script files
+install(FILES
+    ${CMAKE_BINARY_DIR}/${FRANKA_PANDA_CONFIG}.cmake
+    ${CMAKE_BINARY_DIR}/${FRANKA_PANDA_CONFIG}Version.cmake
+    DESTINATION ${FRANKA_PANDA_CONFIG_INSTALL_DIR}
+)
 
 # Build python wrapper
 add_subdirectory(${FRANKA_PANDA_SRC_DIR}/python)
 
-# export(TARGETS ${FRANKA_PANDA_LIB}
-#     NAMESPACE ${FRANKA_PANDA_LIB}::
-#     FILE ${CMAKE_BINARY_DIR}/${FRANKA_PANDA_TARGETS}.cmake)
+export(TARGETS ${FRANKA_PANDA_LIB}
+    NAMESPACE ${FRANKA_PANDA_LIB}::
+    FILE ${CMAKE_BINARY_DIR}/${FRANKA_PANDA_TARGETS}.cmake)
 
-# # Register package in user registry
-# export(PACKAGE ${FRANKA_PANDA_LIB})
+# Register package in user registry
+export(PACKAGE ${FRANKA_PANDA_LIB})
 
