@@ -57,19 +57,14 @@ const std::string& StatusToString(Status status) {
 }
 
 void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
-  const std::string KEY_Q            = args.key_prefix + args.key_q;
-  const std::string KEY_DQ           = args.key_prefix + args.key_dq;
-  const std::string KEY_TAU          = args.key_prefix + args.key_tau;
-  const std::string KEY_DTAU         = args.key_prefix + args.key_dtau;
-  const std::string KEY_M_EE         = args.key_prefix + args.key_m_ee;
-  const std::string KEY_COM_EE       = args.key_prefix + args.key_com_ee;
-  const std::string KEY_I_COM_EE     = args.key_prefix + args.key_I_com_ee;
-  const std::string KEY_TAU_COMMAND  = args.key_prefix + args.key_tau_command;
-  const std::string KEY_POSE_COMMAND = args.key_prefix + args.key_pose_command;
-  const std::string KEY_CONTROL_MODE = args.key_prefix + args.key_control_mode;
-  const std::string KEY_M_LOAD       = args.key_prefix + args.key_m_load;
-  const std::string KEY_COM_LOAD     = args.key_prefix + args.key_com_load;
-  const std::string KEY_I_COM_LOAD   = args.key_prefix + args.key_I_com_load;
+  const std::string KEY_Q             = args.key_prefix + args.key_q;
+  const std::string KEY_DQ            = args.key_prefix + args.key_dq;
+  const std::string KEY_TAU           = args.key_prefix + args.key_tau;
+  const std::string KEY_DTAU          = args.key_prefix + args.key_dtau;
+  const std::string KEY_INERTIA_EE    = args.key_prefix + args.key_inertia_ee;
+  const std::string KEY_TAU_COMMAND   = args.key_prefix + args.key_tau_command;
+  const std::string KEY_POSE_COMMAND  = args.key_prefix + args.key_pose_command;
+  const std::string KEY_CONTROL_MODE  = args.key_prefix + args.key_control_mode;
   const std::string KEY_DRIVER_STATUS = args.key_prefix + args.key_driver_status;
 
   // Connect to Redis
@@ -115,9 +110,15 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
       redis_client.set(KEY_TAU,  ArrayToString(globals->tau.load(),  args.use_json));
       redis_client.set(KEY_DTAU, ArrayToString(globals->dtau.load(), args.use_json));
 
-      redis_client.set(KEY_M_EE,     std::to_string(globals->m_ee.load()));
-      redis_client.set(KEY_COM_EE,   ArrayToString(globals->com_ee.load(),   args.use_json));
-      redis_client.set(KEY_I_COM_EE, ArrayToString(globals->I_com_ee.load(), args.use_json));
+      YAML::Node yaml_ee;
+      yaml_ee["m"] = globals->m_ee.load();
+      yaml_ee["com"] = globals->com_ee.load();
+      std::array<double, 9> I_com_ee = globals->I_com_ee;
+      yaml_ee["I_com"] = std::array<double, 6>{I_com_ee[0], I_com_ee[4], I_com_ee[8],
+                                               I_com_ee[1], I_com_ee[2], I_com_ee[5]};
+      YAML::Emitter json_ee;
+      json_ee << YAML::Flow << yaml_ee;
+      redis_client.set(KEY_INERTIA_EE, json_ee.c_str());
 
       // Commit Redis commands
       redis_client.commit();

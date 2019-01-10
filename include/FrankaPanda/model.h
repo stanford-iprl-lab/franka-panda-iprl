@@ -37,6 +37,7 @@ class Model {
   void set_I_com_load(Eigen::Ref<const Eigen::Matrix<double,6,1>> I_com_flat);
 
   const Eigen::Matrix3d& I_com_load_matrix() const { return I_com_load_; }
+  void set_I_com_load_matrix(Eigen::Ref<const Eigen::Matrix3d> I_com);
 
   const Eigen::Vector3d& g() const { return g_; }
 

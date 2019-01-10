@@ -9,7 +9,7 @@
 
 find_package(yaml-cpp REQUIRED PATHS @CMAKE_BINARY_DIR@/yaml-cpp/build)
 
-add_library(yaml-cpp::yaml INTERFACE IMPORTED)
-set_target_properties(yaml-cpp::yaml PROPERTIES
+add_library(yaml-cpp::yaml-cpp INTERFACE IMPORTED)
+set_target_properties(yaml-cpp::yaml-cpp PROPERTIES
     INTERFACE_LINK_LIBRARIES yaml-cpp
     INTERFACE_INCLUDE_DIRECTORIES ${YAML_CPP_INCLUDE_DIR})

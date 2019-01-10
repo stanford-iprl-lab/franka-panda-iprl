@@ -36,18 +36,14 @@ struct Args {
   std::string key_control_mode = "control::mode";
 
   // Incoming SUB keys
-  std::string key_m_load       = "control::m_load";
-  std::string key_com_load     = "control::com_load";
-  std::string key_I_com_load   = "control::I_com_load";
+  std::string key_inertia_load = "control::inertia_load";
 
   // Outgoing SET keys
-  std::string key_q    = "sensor::q";
-  std::string key_dq   = "sensor::dq";
-  std::string key_tau  = "sensor::tau";
-  std::string key_dtau = "sensor::dtau";
-  std::string key_m_ee     = "model::m_ee";
-  std::string key_com_ee   = "model::com_ee";
-  std::string key_I_com_ee = "model::I_com_ee";
+  std::string key_q             = "sensor::q";
+  std::string key_dq            = "sensor::dq";
+  std::string key_tau           = "sensor::tau";
+  std::string key_dtau          = "sensor::dtau";
+  std::string key_inertia_ee    = "model::inertia_ee";
   std::string key_driver_status = "driver::status";
 
   bool use_json = false;

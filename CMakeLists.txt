@@ -78,12 +78,17 @@ if (NOT Franka_FOUND)
     find_package(Franka 0.5.0 REQUIRED PATHS ${CMAKE_BINARY_DIR}/libfranka/build)
 endif()
 
-# find_package(yaml-cpp 0.6.2 QUIET)
+find_package(yaml-cpp 0.6.2 QUIET)
 if(NOT yaml-cpp_FOUND)
     download_package(yaml-cpp)
     list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_BINARY_DIR})
     find_package(yaml-cpp 0.6.2 REQUIRED)
     list(REMOVE_AT CMAKE_MODULE_PATH 0)
+else()
+    add_library(yaml-cpp::yaml-cpp INTERFACE IMPORTED)
+    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES
+        INTERFACE_LINK_LIBRARIES yaml-cpp
+        INTERFACE_INCLUDE_DIRECTORIES ${YAML_CPP_INCLUDE_DIR})
 endif()
 
 target_link_libraries(${FRANKA_PANDA_BIN}
@@ -91,7 +96,7 @@ target_link_libraries(${FRANKA_PANDA_BIN}
         cpp_redis::cpp_redis
         Eigen3::Eigen
         Franka::Franka
-        yaml-cpp::yaml
+        yaml-cpp::yaml-cpp
         atomic  # Needed for gcc 5.4.0
 )
 

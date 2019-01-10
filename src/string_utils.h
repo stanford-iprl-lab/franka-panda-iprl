@@ -11,8 +11,9 @@
 #ifndef FRANKA_DRIVER_STRING_UTILS_H_
 #define FRANKA_DRIVER_STRING_UTILS_H_
 
-#include <array>   // std::array
-#include <string>  // std::string
+#include <array>    // std::array
+#include <string>   // std::string
+#include <sstream>  // std::stringstream
 
 #include "controllers.h"
 #include "eigen_utils.h"
@@ -41,6 +42,18 @@ std::array<double, Dim> StringToArray(const std::string str, bool use_json) {
   Eigen::Map<Eigen::VectorXd> m(&M(0, 0), M.size());
   map = m;
   return arr;
+}
+
+template<unsigned long Dim>
+std::stringstream& operator<<(std::stringstream& ss, const std::array<double, Dim>& arr) {
+  ss << ArrayToString(arr);
+  return ss;
+}
+
+template<unsigned long Dim>
+std::stringstream& operator>>(std::stringstream& ss, std::array<double, Dim>& arr) {
+  arr = StringToArray<Dim>(ss.str());
+  return ss;
 }
 
 template<int Rows, int Cols, unsigned long Dim>

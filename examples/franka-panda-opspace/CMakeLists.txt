@@ -39,10 +39,17 @@ target_compile_options(${FRANKA_OPSPACE_BIN} PRIVATE
 find_package(SpatialDyn 1.0.0 REQUIRED)
 find_package(FrankaPanda 1.0.0 REQUIRED)
 
+find_package(yaml-cpp 0.6.2 REQUIRED)
+add_library(yaml-cpp::yaml-cpp INTERFACE IMPORTED)
+set_target_properties(yaml-cpp::yaml-cpp PROPERTIES
+    INTERFACE_LINK_LIBRARIES yaml-cpp
+    INTERFACE_INCLUDE_DIRECTORIES ${YAML_CPP_INCLUDE_DIR})
+
 target_link_libraries(${FRANKA_OPSPACE_BIN}
     PRIVATE
         SpatialDyn::SpatialDyn
         FrankaPanda::FrankaPanda
+        yaml-cpp::yaml-cpp
 )
 
 # Attach sources

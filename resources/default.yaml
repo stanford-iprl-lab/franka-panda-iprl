@@ -36,18 +36,14 @@ redis:
     q_command:    "control::q"
     dq_command:   "control::dq"
     control_mode: "control::mode"
-    m_load:       "control::m_load"
-    com_load:     "control::com_load"
-    I_com_load:   "control::I_com_load"
+    inertia_load: "control::inertia_load"
 
     # Keys written by driver
-    q:        "sensor::q"
-    dq:       "sensor::dq"
-    tau:      "sensor::tau"
-    dtau:     "sensor::dtau"
-    m_ee:     "model::m_ee"
-    com_ee:   "model::com_ee"
-    I_com_ee: "model::I_com_ee"
+    q:             "sensor::q"
+    dq:            "sensor::dq"
+    tau:           "sensor::tau"
+    dtau:          "sensor::dtau"
+    inertia_ee:    "model::inertia_ee"
     driver_status: "driver::status"
 
   # Use JSON or Matlab formatting for matrices in Redis

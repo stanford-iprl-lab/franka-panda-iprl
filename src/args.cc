@@ -74,26 +74,22 @@ Args ParseYaml(const char* filename) {
   args.ip_redis   = yaml["redis"]["ip"].as<std::string>();
   args.port_redis = yaml["redis"]["port"].as<size_t>();
 
-  args.key_prefix       = yaml["redis"]["keys"]["prefix"].as<std::string>();
-  args.key_tau_command  = yaml["redis"]["keys"]["tau_command"].as<std::string>();
-  args.key_pose_command = yaml["redis"]["keys"]["pose_command"].as<std::string>();
-  args.key_dx_command   = yaml["redis"]["keys"]["dx_command"].as<std::string>();
-  args.key_q_command    = yaml["redis"]["keys"]["q_command"].as<std::string>();
-  args.key_dq_command   = yaml["redis"]["keys"]["dq_command"].as<std::string>();
-  args.key_control_mode = yaml["redis"]["keys"]["control_mode"].as<std::string>();
-  args.key_m_load       = yaml["redis"]["keys"]["m_load"].as<std::string>();
-  args.key_com_load     = yaml["redis"]["keys"]["com_load"].as<std::string>();
-  args.key_I_com_load   = yaml["redis"]["keys"]["I_com_load"].as<std::string>();
-  args.key_q            = yaml["redis"]["keys"]["q"].as<std::string>();
-  args.key_dq           = yaml["redis"]["keys"]["dq"].as<std::string>();
-  args.key_tau          = yaml["redis"]["keys"]["tau"].as<std::string>();
-  args.key_dtau         = yaml["redis"]["keys"]["dtau"].as<std::string>();
-  args.key_m_ee         = yaml["redis"]["keys"]["m_ee"].as<std::string>();
-  args.key_com_ee       = yaml["redis"]["keys"]["com_ee"].as<std::string>();
-  args.key_I_com_ee     = yaml["redis"]["keys"]["I_com_ee"].as<std::string>();
+  args.key_prefix        = yaml["redis"]["keys"]["prefix"].as<std::string>();
+  args.key_tau_command   = yaml["redis"]["keys"]["tau_command"].as<std::string>();
+  args.key_pose_command  = yaml["redis"]["keys"]["pose_command"].as<std::string>();
+  args.key_dx_command    = yaml["redis"]["keys"]["dx_command"].as<std::string>();
+  args.key_q_command     = yaml["redis"]["keys"]["q_command"].as<std::string>();
+  args.key_dq_command    = yaml["redis"]["keys"]["dq_command"].as<std::string>();
+  args.key_control_mode  = yaml["redis"]["keys"]["control_mode"].as<std::string>();
+  args.key_inertia_load  = yaml["redis"]["keys"]["inertia_load"].as<std::string>();
+  args.key_q             = yaml["redis"]["keys"]["q"].as<std::string>();
+  args.key_dq            = yaml["redis"]["keys"]["dq"].as<std::string>();
+  args.key_tau           = yaml["redis"]["keys"]["tau"].as<std::string>();
+  args.key_dtau          = yaml["redis"]["keys"]["dtau"].as<std::string>();
+  args.key_inertia_ee    = yaml["redis"]["keys"]["inertia_ee"].as<std::string>();
   args.key_driver_status = yaml["redis"]["keys"]["driver_status"].as<std::string>();
 
-  args.use_json         = yaml["redis"]["use_json"].as<bool>();
+  args.use_json          = yaml["redis"]["use_json"].as<bool>();
 
   // Load parameters
   args.load_mass = yaml["load"]["mass"].as<double>();
@@ -200,16 +196,12 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  key_q_command: " << args.key_q_command << std::endl
      << "  key_dq_command: " << args.key_dq_command << std::endl
      << "  key_control_mode: " << args.key_control_mode << std::endl
-     << "  key_m_load: " << args.key_m_load << std::endl
-     << "  key_com_load: " << args.key_com_load << std::endl
-     << "  key_I_com_load: " << args.key_I_com_load << std::endl
+     << "  key_inertia_load: " << args.key_inertia_load << std::endl
      << "  key_q: " << args.key_q << std::endl
      << "  key_dq: " << args.key_dq << std::endl
      << "  key_tau: " << args.key_tau << std::endl
      << "  key_dtau: " << args.key_dtau << std::endl
-     << "  key_m_ee: " << args.key_m_ee << std::endl
-     << "  key_com_ee: " << args.key_com_ee << std::endl
-     << "  key_I_com_ee: " << args.key_I_com_ee << std::endl
+     << "  key_inertia_ee: " << args.key_inertia_ee << std::endl
      << "  key_driver_status: " << args.key_driver_status << std::endl
      << "  use_json: " << args.use_json << std::endl
      << "  load_mass: " << args.load_mass << std::endl

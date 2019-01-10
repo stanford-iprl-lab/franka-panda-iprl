@@ -44,6 +44,12 @@ void Model::set_I_com_load(Eigen::Ref<const Eigen::Matrix<double,6,1>> I_com_fla
                  I_com_flat(4), I_com_flat(5), I_com_flat(2);
 }
 
+void Model::set_I_com_load_matrix(Eigen::Ref<const Eigen::Matrix3d> I_com) {
+  Eigen::Matrix<double,6,1> I_com_flat;
+  I_com_flat << I_com(0, 0), I_com(1, 1), I_com(2, 2), I_com(0, 1), I_com(0, 2), I_com(1, 2);
+  set_I_com_load(I_com_flat);
+}
+
 Eigen::Isometry3d CartesianPose(const Model& model, int link) {
   if (link < 0) link += model.dof();
 
