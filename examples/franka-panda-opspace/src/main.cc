@@ -76,8 +76,9 @@ int main(int argc, char* argv[]) {
   redis_client.set(KEY_SENSOR_DQ, ab.dq());
   redis_client.sync_commit();
 
+  const Eigen::Vector3d kEeOffset = Eigen::Vector3d(0., 0., 0.107);
   Eigen::VectorXd q_des       = ab.q();
-  Eigen::Vector3d x_0         = SpatialDyn::Position(ab);
+  Eigen::Vector3d x_0         = SpatialDyn::Position(ab, -1, kEeOffset);
   Eigen::Quaterniond quat_des = SpatialDyn::Orientation(ab);
 
   bool is_initialized = false;
@@ -114,9 +115,9 @@ int main(int argc, char* argv[]) {
 
     Eigen::Vector3d x_des = x_0;
     x_des(1) += 0.2 * std::sin(timer.time_sim());
-    Eigen::Vector3d x = SpatialDyn::Position(ab);
+    Eigen::Vector3d x = SpatialDyn::Position(ab, -1, kEeOffset);
     Eigen::Vector3d x_err = x - x_des;
-    Eigen::Vector3d dx_err = SpatialDyn::LinearJacobian(ab) * ab.dq();
+    Eigen::Vector3d dx_err = SpatialDyn::LinearJacobian(ab, -1, kEeOffset) * ab.dq();
     Eigen::Vector3d ddx = -40 * x_err - 13 * dx_err;
 
     Eigen::Quaterniond quat = SpatialDyn::Orientation(ab);
@@ -126,7 +127,7 @@ int main(int argc, char* argv[]) {
 
     Eigen::Vector6d ddx_dw;
     ddx_dw << ddx, dw;
-    const Eigen::Matrix6Xd& J = SpatialDyn::Jacobian(ab);
+    const Eigen::Matrix6Xd& J = SpatialDyn::Jacobian(ab, -1, kEeOffset);
     Eigen::MatrixXd N;
     Eigen::VectorXd tau = SpatialDyn::Opspace::InverseDynamics(ab, J, ddx_dw, &N);
 
