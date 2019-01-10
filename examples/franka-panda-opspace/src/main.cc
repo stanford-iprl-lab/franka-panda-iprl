@@ -33,6 +33,7 @@ const std::string KEY_SENSOR_Q      = KEY_PREFIX + "sensor::q";
 const std::string KEY_SENSOR_DQ     = KEY_PREFIX + "sensor::dq";
 const std::string KEY_TRAJ_POS      = KEY_PREFIX + "trajectory::pos";
 const std::string KEY_TRAJ_ORI      = KEY_PREFIX + "trajectory::ori";
+const std::string KEY_TRAJ_POS_ERR  = KEY_PREFIX + "trajectory::pos_err";
 const std::string KEY_CONTROL_TAU   = KEY_PREFIX + "control::tau";
 const std::string KEY_CONTROL_MODE  = KEY_PREFIX + "control::mode";
 const std::string KEY_DRIVER_STATUS = KEY_PREFIX + "driver::status";
@@ -67,14 +68,13 @@ int main(int argc, char* argv[]) {
     q_0 << 0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.;
     ab.set_q(q_0);
     ab.set_dq(dq_0);
+    redis_client.set(KEY_SENSOR_Q, ab.q());
+    redis_client.set(KEY_SENSOR_DQ, ab.dq());
+    redis_client.sync_commit();
   } else {
     ab.set_q(redis_client.sync_get<Eigen::VectorXd>(KEY_SENSOR_Q));
     ab.set_dq(redis_client.sync_get<Eigen::VectorXd>(KEY_SENSOR_DQ));
   }
-
-  redis_client.set(KEY_SENSOR_Q, ab.q());
-  redis_client.set(KEY_SENSOR_DQ, ab.dq());
-  redis_client.sync_commit();
 
   const Eigen::Vector3d kEeOffset = Eigen::Vector3d(0., 0., 0.107);
   Eigen::VectorXd q_des       = ab.q();
@@ -108,22 +108,23 @@ int main(int argc, char* argv[]) {
       Eigen::Map<Eigen::Vector3d> com(arr_com.data());
       Eigen::Map<Eigen::Vector6d> I_com(arr_I_com.data());
       SpatialDyn::SpatialInertiad I_load(m, com, I_com);
-      if (ab.inertia_load().at(ab.dof() - 1) != I_load) {
+      if (ab.inertia_load().find(ab.dof() - 1) == ab.inertia_load().end() ||
+	  ab.inertia_load().at(ab.dof() - 1) != I_load) {
         ab.ReplaceLoad(SpatialDyn::SpatialInertiad(m, com, I_com));
       }
     }
 
     Eigen::Vector3d x_des = x_0;
-    x_des(1) += 0.2 * std::sin(timer.time_sim());
+    //x_des(1) += 0.2 * std::sin(timer.time_sim());
     Eigen::Vector3d x = SpatialDyn::Position(ab, -1, kEeOffset);
     Eigen::Vector3d x_err = x - x_des;
     Eigen::Vector3d dx_err = SpatialDyn::LinearJacobian(ab, -1, kEeOffset) * ab.dq();
-    Eigen::Vector3d ddx = -40 * x_err - 13 * dx_err;
+    Eigen::Vector3d ddx = -40 * x_err - 5 * dx_err;
 
     Eigen::Quaterniond quat = SpatialDyn::Orientation(ab);
     Eigen::Vector3d ori_err = SpatialDyn::Opspace::OrientationError(quat, quat_des);
     Eigen::Vector3d w_err = SpatialDyn::AngularJacobian(ab) * ab.dq();
-    Eigen::Vector3d dw = -10 * ori_err - 10 * w_err;
+    Eigen::Vector3d dw = -100 * ori_err;// - 10 * w_err;
 
     Eigen::Vector6d ddx_dw;
     ddx_dw << ddx, dw;
@@ -131,11 +132,11 @@ int main(int argc, char* argv[]) {
     Eigen::MatrixXd N;
     Eigen::VectorXd tau = SpatialDyn::Opspace::InverseDynamics(ab, J, ddx_dw, &N);
 
-    static const Eigen::MatrixXd I = Eigen::MatrixXd::Identity(ab.dof(), ab.dof());
+    /*static const Eigen::MatrixXd I = Eigen::MatrixXd::Identity(ab.dof(), ab.dof());
     Eigen::VectorXd q_err = ab.q() - q_des;
     Eigen::VectorXd dq_err = ab.dq();
     Eigen::VectorXd ddq = -16 * q_err - 8 * dq_err;
-    tau += SpatialDyn::Opspace::InverseDynamics(ab, I, ddq, &N);
+    tau += SpatialDyn::Opspace::InverseDynamics(ab, I, ddq, &N);*/
     tau += SpatialDyn::Gravity(ab);
 
     if (kSim) {
@@ -157,6 +158,7 @@ int main(int argc, char* argv[]) {
 
     redis_client.set(KEY_TRAJ_POS, x);
     redis_client.set(KEY_TRAJ_ORI, quat.coeffs());
+    redis_client.set(KEY_TRAJ_POS_ERR, x_err);
     redis_client.sync_commit();
   }
   std::cout << "Simulated " << timer.time_sim() << "s in " << timer.time_elapsed() << "s." << std::endl;

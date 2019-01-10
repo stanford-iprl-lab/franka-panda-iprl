@@ -52,6 +52,7 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
   }
 
   virtual void AddLoad(const SpatialDyn::SpatialInertiad& inertia, int idx_link = -1) override {
+    if (idx_link < 0) idx_link += dof();
     SpatialDyn::ArticulatedBody::AddLoad(inertia, idx_link);
     set_inertia_load(inertia_load_.at(idx_link));
     ComputeInertia();
@@ -60,6 +61,7 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
   }
 
   virtual void ReplaceLoad(const SpatialDyn::SpatialInertiad& inertia, int idx_link = -1) override {
+    if (idx_link < 0) idx_link += dof();
     SpatialDyn::ArticulatedBody::ReplaceLoad(inertia, idx_link);
     set_inertia_load(inertia_load_.at(idx_link));
     ComputeInertia();
@@ -68,6 +70,7 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
   }
 
   virtual void ClearLoad(int idx_link = -1) override {
+    if (idx_link < 0) idx_link += dof();
     SpatialDyn::ArticulatedBody::ClearLoad(idx_link);
     set_inertia_load(inertia_load_.at(idx_link));
     ComputeInertia();

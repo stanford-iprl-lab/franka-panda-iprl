@@ -84,7 +84,7 @@ control:
   torque_controller:
 
     # Compensate for gravity
-    compensate_gravity: true
+    compensate_gravity: false
 
   # Joint space controller parameters
   joint_space_controller:
