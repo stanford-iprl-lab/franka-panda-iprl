@@ -1,6 +1,7 @@
 bin/*
 build/*
 external/*
+*.egg-info/
 compile_commands.json
 *.swp
 *.rdb

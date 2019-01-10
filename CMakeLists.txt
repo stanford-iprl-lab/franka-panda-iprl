@@ -16,7 +16,6 @@ project(franka_panda VERSION 1.0.0 LANGUAGES CXX)
 
 # Set CMake flags
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_VERBOSE_MAKEFILE ON) # TODO: Remove
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
@@ -41,8 +40,6 @@ target_compile_options(${FRANKA_PANDA_BIN} PRIVATE
 )
 
 # Find dependencies
-# list(INSERT CMAKE_MODULE_PATH 0 ${FRANKA_PANDA_CMAKE_DIR})
-
 function(download_package PACKAGE_NAME)
     configure_file(${FRANKA_PANDA_CMAKE_DIR}/${PACKAGE_NAME}-CMakeLists.txt.in
         ${CMAKE_BINARY_DIR}/${PACKAGE_NAME}/CMakeLists.txt)
@@ -55,8 +52,8 @@ endfunction()
 # Export for build tree
 configure_file(${FRANKA_PANDA_CMAKE_DIR}/Findcpp_redis.cmake.in
     ${CMAKE_BINARY_DIR}/Findcpp_redis.cmake @ONLY)
-# configure_file(${FRANKA_PANDA_CMAKE_DIR}/FindEigen3.cmake.in
-#     ${CMAKE_BINARY_DIR}/FindEigen3.cmake @ONLY)
+configure_file(${FRANKA_PANDA_CMAKE_DIR}/FindEigen3.cmake.in
+    ${CMAKE_BINARY_DIR}/FindEigen3.cmake @ONLY)
 configure_file(${FRANKA_PANDA_CMAKE_DIR}/Findyaml-cpp.cmake.in
     ${CMAKE_BINARY_DIR}/Findyaml-cpp.cmake @ONLY)
 

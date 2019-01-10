@@ -1,5 +1,5 @@
 ############################################################
-# Finds the Eigen3 library built inside SpatialDyn
+# Finds the Eigen3 library built inside FrankaPanda
 #
 # Copyright 2018. All Rights Reserved.
 #
