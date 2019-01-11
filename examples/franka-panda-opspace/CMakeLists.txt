@@ -26,6 +26,7 @@ endif()
 set(FRANKA_OPSPACE_BIN franka_panda_opspace)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(FRANKA_OPSPACE_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
+set(FRANKA_PANDA_EXT_DIR ${PROJECT_SOURCE_DIR}/../../external)
 
 # Create Franka Panda driver
 add_executable(${FRANKA_OPSPACE_BIN})
@@ -58,3 +59,15 @@ target_sources(${FRANKA_OPSPACE_BIN}
         ${FRANKA_OPSPACE_SRC_DIR}/main.cc
 )
 
+find_package(pybind11 QUIET)
+if(NOT pybind11_FOUND)
+    set(PYBIND11_LIB_DIR ${FRANKA_PANDA_EXT_DIR}/pybind11.git)
+    add_subdirectory(${PYBIND11_LIB_DIR} ${CMAKE_CURRENT_BINARY_DIR}/pybind11)
+endif()
+
+pybind11_add_module(spatialdyn_frankapanda ${FRANKA_OPSPACE_SRC_DIR}/python_bindings.cc)
+target_link_libraries(spatialdyn_frankapanda
+    PUBLIC
+        SpatialDyn::SpatialDyn
+        FrankaPanda::FrankaPanda
+        pybind11::pybind11)

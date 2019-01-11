@@ -1,5 +1,5 @@
 /**
- * spatial_dyn_franka_panda.h
+ * articulated_body.h
  *
  * Copyright 2019. All Rights Reserved.
  * Stanford IPRL
@@ -17,12 +17,6 @@
 
 namespace FrankaPanda {
 
-class ArticulatedBody;
-
-}  // namespace FrankaPanda
-
-namespace FrankaPanda {
-
 class ArticulatedBody : public SpatialDyn::ArticulatedBody {
 
  public:
@@ -34,8 +28,6 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
   ArticulatedBody(const SpatialDyn::ArticulatedBody& ab) : SpatialDyn::ArticulatedBody(ab) {}
 
   virtual ~ArticulatedBody() {}
-
- public:
 
   virtual void set_q(Eigen::Ref<const Eigen::VectorXd> q) override {
     SpatialDyn::ArticulatedBody::set_q(q);

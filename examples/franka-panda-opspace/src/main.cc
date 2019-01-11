@@ -18,7 +18,7 @@
 #include <SpatialDyn/utils/eigen_string.h>
 #include <yaml-cpp/yaml.h>
 
-#include "spatial_dyn_franka_panda.h"
+#include "articulated_body.h"
 
 namespace {
 

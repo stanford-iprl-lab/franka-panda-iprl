@@ -1,9 +1,10 @@
 /**
- * spatial_dyn.cc
+ * franka_panda.cc
  *
- * Copyright 2018. All Rights Reserved.
+ * Copyright 2019. All Rights Reserved.
+ * IPRL
  *
- * Created: September 7, 2018
+ * Created: January 07, 2019
  * Authors: Toki Migimatsu
  */
 
