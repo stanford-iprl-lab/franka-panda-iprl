@@ -12,23 +12,25 @@ import json
 
 # Redis key to monitor
 REDIS_KEYS = ["franka_panda::sensor::q", "franka_panda::control::tau"]
+REDIS_KEYS = ["franka_panda::trajectory::pos_err", "franka_panda::trajectory::ori_err"]
 
 # Legend labels
 # LABELS = ["Fx", "Fy", "Fz", "Mx", "My", "Mz"]
 LABELS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 't1', 't2', 't3', 't4', 't5', 't6', 't7']
+LABELS = ['x_err', 'y_err', 'z_err', 'wx_err', 'wy_err', 'wz_err']
 
 # Line colors
 COLORS = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink']
 COLORS = COLORS + COLORS
 
 # Split data into subplots at these start indices
-SUBPLOT_START = [0, 7]
+SUBPLOT_START = [0, 3]
 
 # Number of seconds to display
 TIME_WINDOW = 60
 
 # Y axis limits
-Y_LIM = [-2, 2]
+Y_LIM = [-0.5, 0.5]
 
 
 class RealtimePlotter:

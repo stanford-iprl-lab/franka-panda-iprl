@@ -81,6 +81,7 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
   void ComputeInertia() {
     auto& crba = cache_->crba_data_;
     crba.A = Inertia(franka_panda_);
+    crba.A.diagonal().tail<3>() += Eigen::Vector3d(0.07, 0.07, 0.07);
     crba.is_computed = true;
   }
 
