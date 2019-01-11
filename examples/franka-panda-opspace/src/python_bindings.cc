@@ -34,6 +34,8 @@ PYBIND11_MODULE(spatialdyn_frankapanda, m) {
       .def_property("dq",
                     (const Eigen::VectorXd& (ArticulatedBody::*)(void) const) &ArticulatedBody::dq,
                     &ArticulatedBody::set_dq)
+      .def_property("inertia_compensation", &ArticulatedBody::inertia_compensation,
+                    &ArticulatedBody::set_inertia_compensation)
       .def("add_load", &ArticulatedBody::AddLoad, "inertia"_a, "idx_link"_a = -1)
       .def("replace_load", &ArticulatedBody::ReplaceLoad, "inertia"_a, "idx_link"_a = -1)
       .def("clear_load", &ArticulatedBody::ClearLoad, "idx_link"_a = -1);

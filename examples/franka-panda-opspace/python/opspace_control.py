@@ -46,10 +46,14 @@ def main():
 
     ab = ArticulatedBody(spatialdyn.urdf.load_model("resources/franka_panda.urdf"))
 
+    ab.inertia_compensation = np.array([0.2, 0.1, 0.1])
+
     kp_pos = 40
     kv_pos = 5
-    kp_ori = 100
-    kv_ori = 0
+    kp_ori = 40
+    kv_ori = 5
+    kp_joint = 5
+    kv_joint = 0
     redis_db.set("franka_panda::control::kp_pos", kp_pos)
     redis_db.set("franka_panda::control::kv_pos", kv_pos)
     redis_db.set("franka_panda::control::kp_ori", kp_ori)
@@ -84,6 +88,7 @@ def main():
 
             x_des = np.array(x_0)
             x_des[1] += 0.2 * np.sin(timer.time_sim())
+            x_des[0] += 0.2 * (np.cos(timer.time_sim()) - 1)
             x = spatialdyn.position(ab, offset=ee_offset)
             x_err = x - x_des
             dx_err = spatialdyn.linear_jacobian(ab, offset=ee_offset).dot(ab.dq)
@@ -99,16 +104,16 @@ def main():
             N = np.eye(ab.dof)
             tau_cmd = spatialdyn.opspace.inverse_dynamics(ab, J, ddx_dw, N)
 
-            # I = np.eye(ab.dof)
-            # q_err = ab.q - q_des
-            # dq_err = ab.dq
-            # ddq = -kp_joint * q_err - kv_joint * dq_err
-            # tau += spatialdyn.opspace.inverse_dynamics(ab, I, ddq, N)
+            I = np.eye(ab.dof)
+            q_err = ab.q - q_des
+            dq_err = ab.dq
+            ddq = -kp_joint * q_err - kv_joint * dq_err
+            tau_cmd += spatialdyn.opspace.inverse_dynamics(ab, I, ddq, N)
 
             #tau_cmd[6] = filter(tau_cmd[6], 0.7, 0.01)
-            tau_cmd[6] = filter(tau_cmd[6], 0.7, 0.1)
-            tau_cmd[5] = filter(tau_cmd[5], 0.7, 0.01)
-            tau_cmd[4] = filter(tau_cmd[4], 0.7, 0.1)
+            tau_cmd[6] = filter(tau_cmd[6], 0.6, 0.1)
+            tau_cmd[5] = filter(tau_cmd[5], 0.8, 0.1)
+            tau_cmd[4] = filter(tau_cmd[4], 0.8, 0.1)
 
             tau_cmd += spatialdyn.gravity(ab)
 
