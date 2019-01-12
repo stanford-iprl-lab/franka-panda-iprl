@@ -37,6 +37,7 @@ def main():
     parser = argparse.ArgumentParser(description=(
         "Operational space controller for the Franka Panda."
     ))
+    parser.add_argument("urdf", help="franka_panda.urdf")
     parser.add_argument("--sim", help="run in simulation", action="store_true")
     args = parser.parse_args()
 
@@ -46,7 +47,7 @@ def main():
     # GET keys
     KEY_SENSOR_Q      = KEY_PREFIX + "sensor::q"
     KEY_SENSOR_DQ     = KEY_PREFIX + "sensor::dq"
-    KEY_INERTIA_EE    = KEY_PREFIX + "model::inertia_ee"
+    KEY_MODEL_EE    = KEY_PREFIX + "model::inertia_ee"
     KEY_DRIVER_STATUS = KEY_PREFIX + "driver::status"
 
     # SET keys
@@ -56,6 +57,7 @@ def main():
     KEY_TRAJ_ORI     = KEY_PREFIX + "trajectory::ori"
     KEY_TRAJ_POS_ERR = KEY_PREFIX + "trajectory::pos_err"
     KEY_TRAJ_ORI_ERR = KEY_PREFIX + "trajectory::ori_err"
+    KEY_MODEL        = KEY_PREFIX + "model"
 
     # Controller gains
     KEY_KP_POS   = KEY_PREFIX + "control::kp_pos"
@@ -71,7 +73,7 @@ def main():
     timer = spatialdyn.Timer(1000)
 
     # Load robot
-    ab = ArticulatedBody(spatialdyn.urdf.load_model("resources/franka_panda.urdf"))
+    ab = ArticulatedBody(spatialdyn.urdf.load_model(args.urdf))
     q_home = np.array([0., -np.pi/6., 0., -5./6. * np.pi, 0., 2./3. * np.pi, 0.])
     if args.sim:
         ab.q  = q_home
@@ -82,13 +84,16 @@ def main():
         ab.q  = decode_matlab(redis_client.get(KEY_SENSOR_Q))
         ab.dq = decode_matlab(redis_client.get(KEY_SENSOR_DQ))
 
+    # Send model to visualizer
+    redis_client.set(KEY_MODEL, str(ab))
+
     # Initialize parameters
-    kp_pos   = 40
-    kv_pos   = 5
-    kp_ori   = 40
-    kv_ori   = 5
-    kp_joint = 5
-    kv_joint = 0
+    kp_pos   = 40.
+    kv_pos   = 5.
+    kp_ori   = 40.
+    kv_ori   = 5.
+    kp_joint = 5.
+    kv_joint = 0.
 
     ee_offset = np.array([0., 0., 0.107])
     q_des     = np.array(q_home)
@@ -107,8 +112,8 @@ def main():
     redis_client.set(KEY_KP_JOINT, kp_joint)
     redis_client.set(KEY_KV_JOINT, kv_joint)
 
-    # Get end-effector inertia from driver
-    redis_ee = redis_client.get(KEY_INERTIA_EE)
+    # Get end-effector model from driver
+    redis_ee = redis_client.get(KEY_MODEL_EE)
     if redis_ee is not None:
         json_ee  = json.loads(redis_ee.decode("utf8"))
         m_ee     = float(json_ee["m"])
@@ -132,19 +137,19 @@ def main():
             if not args.sim and redis_client.get(KEY_DRIVER_STATUS).decode("utf8") != "running":
                 break
 
-            # Update gains
-            redis_pipe.get(KEY_KP_POS).get(KEY_KV_POS).get(KEY_KP_ORI).get(KEY_KV_ORI).get(KEY_KP_JOINT).get(KEY_KV_JOINT)
-            kp_pos, kv_pos, kp_ori, kv_ori, kp_joint, kv_joint = tuple(map(float, redis_pipe.execute()))
-
             # Update robot state
             if not args.sim:
                 ab.q  = decode_matlab(redis_client.get(KEY_SENSOR_Q))
                 ab.dq = decode_matlab(redis_client.get(KEY_SENSOR_DQ))
 
+            # Update gains
+            redis_pipe.get(KEY_KP_POS).get(KEY_KV_POS).get(KEY_KP_ORI).get(KEY_KV_ORI).get(KEY_KP_JOINT).get(KEY_KV_JOINT)
+            kp_pos, kv_pos, kp_ori, kv_ori, kp_joint, kv_joint = tuple(map(float, redis_pipe.execute()))
+
             # Position
             x_des = np.array(x_0)
+            x_des[0] += 0.2 * (np.cos(timer.time_sim()) - 1.)
             x_des[1] += 0.2 * np.sin(timer.time_sim())
-            x_des[0] += 0.2 * (np.cos(timer.time_sim()) - 1)
             x = spatialdyn.position(ab, offset=ee_offset)
             x_err = x - x_des
             dx_err = spatialdyn.linear_jacobian(ab, offset=ee_offset).dot(ab.dq)
@@ -188,7 +193,7 @@ def main():
                 redis_client.set(KEY_CONTROL_MODE, "torque")
                 is_initialized = True
 
-            # Send trajectory info for visualizer
+            # Send trajectory info to visualizer
             redis_client.set(KEY_TRAJ_POS, encode_matlab(x))
             redis_client.set(KEY_TRAJ_ORI, encode_matlab(quat.coeffs))
             redis_client.set(KEY_TRAJ_POS_ERR, encode_matlab(x_err))
