@@ -65,8 +65,7 @@ def main():
         kv_joint = float(redis_db.get("franka_panda::control::kv_joint"))
 
         robot.q = np.array(list(map(float, redis_db.get("franka_panda::sensor::q").decode("utf-8").strip().split(" "))))
-        dq = np.array(list(map(float, redis_db.get("franka_panda::sensor::dq").decode("utf-8").strip().split(" "))))
-        robot.dq = dq
+        robot.dq = np.array(list(map(float, redis_db.get("franka_panda::sensor::dq").decode("utf-8").strip().split(" "))))
 
         A = frankapanda.inertia(robot)
         V = frankapanda.centrifugal_coriolis(robot)

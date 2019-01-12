@@ -1,91 +1,147 @@
 #!/usr/bin/env python
 
-import redis
-import numpy as np
+import argparse
 import json
-import time
 import signal
 import sys
+import time
+
+import redis
+import numpy as np
 
 import spatialdyn
 import frankapanda
 from spatialdyn_frankapanda import *
 
-redis_db = None
+g_runloop = True
 
 def signal_handler(sig, frame):
-    global redis_db
-    if redis_db is not None:
-        redis_db.set("franka_panda::control::mode", "floating")
-        redis_db.set("franka_panda::control::tau", " ".join(["0."] * 7))
-        print("Cleared torques and set control mode to 'floating'.")
-    sys.exit(0)
+    global g_runloop
+    g_runloop = False
 
-def sign(x, epsilon=1e-2):
-    if x > epsilon:
-        return 1
-    elif x < -epsilon:
-        return -1
-    else:
-        return 0
+def encode_matlab(A):
+    if len(A.shape) == 1:
+        return " ".join(map(str, A.tolist()))
+    return "; ".join(" ".join(map(str, row)) for row in A.tolist())
 
-def filter(x, threshold, epsilon):
-    if abs(x) < threshold:
-        if abs(x) < epsilon:
-            dx = x / epsilon - np.sign(x)
-            return -np.sign(x) * threshold * (dx*dx - 1)
-        return np.sign(x) * threshold
-    return x
+def decode_matlab(s):
+    try:
+        s = s.decode("utf-8")
+    except AttributeError:
+        pass
+    return np.array([list(map(float, row.strip().split())) for row in s.strip().split(";")]).squeeze()
+
 
 def main():
-    global redis_db
-    redis_db = redis.Redis()
+    # Parse args
+    parser = argparse.ArgumentParser(description=(
+        "Operational space controller for the Franka Panda."
+    ))
+    parser.add_argument("--sim", help="run in simulation", action="store_true")
+    args = parser.parse_args()
+
+    # Redis keys
+    KEY_PREFIX = "franka_panda::"
+
+    # GET keys
+    KEY_SENSOR_Q      = KEY_PREFIX + "sensor::q"
+    KEY_SENSOR_DQ     = KEY_PREFIX + "sensor::dq"
+    KEY_INERTIA_EE    = KEY_PREFIX + "model::inertia_ee"
+    KEY_DRIVER_STATUS = KEY_PREFIX + "driver::status"
+
+    # SET keys
+    KEY_CONTROL_TAU  = KEY_PREFIX + "control::tau"
+    KEY_CONTROL_MODE = KEY_PREFIX + "control::mode"
+    KEY_TRAJ_POS     = KEY_PREFIX + "trajectory::pos"
+    KEY_TRAJ_ORI     = KEY_PREFIX + "trajectory::ori"
+    KEY_TRAJ_POS_ERR = KEY_PREFIX + "trajectory::pos_err"
+    KEY_TRAJ_ORI_ERR = KEY_PREFIX + "trajectory::ori_err"
+
+    # Controller gains
+    KEY_KP_POS   = KEY_PREFIX + "control::kp_pos"
+    KEY_KV_POS   = KEY_PREFIX + "control::kv_pos"
+    KEY_KP_ORI   = KEY_PREFIX + "control::kp_ori"
+    KEY_KV_ORI   = KEY_PREFIX + "control::kv_ori"
+    KEY_KP_JOINT = KEY_PREFIX + "control::kp_joint"
+    KEY_KV_JOINT = KEY_PREFIX + "control::kv_joint"
+
+    # Create Redis client and timer
+    redis_client = redis.Redis("127.0.0.1")
+    redis_pipe   = redis_client.pipeline(transaction=False)
     timer = spatialdyn.Timer(1000)
 
-    signal.signal(signal.SIGINT, signal_handler)
-
+    # Load robot
     ab = ArticulatedBody(spatialdyn.urdf.load_model("resources/franka_panda.urdf"))
+    q_home = np.array([0., -np.pi/6., 0., -5./6. * np.pi, 0., 2./3. * np.pi, 0.])
+    if args.sim:
+        ab.q  = q_home
+        ab.dq = np.zeros((ab.dof,))
+        redis_client.set(KEY_SENSOR_Q, encode_matlab(ab.q))
+        redis_client.set(KEY_SENSOR_DQ, encode_matlab(ab.q))
+    else:
+        ab.q  = decode_matlab(redis_client.get(KEY_SENSOR_Q))
+        ab.dq = decode_matlab(redis_client.get(KEY_SENSOR_DQ))
 
-    ab.inertia_compensation = np.array([0.2, 0.1, 0.1])
-
-    kp_pos = 40
-    kv_pos = 5
-    kp_ori = 40
-    kv_ori = 5
+    # Initialize parameters
+    kp_pos   = 40
+    kv_pos   = 5
+    kp_ori   = 40
+    kv_ori   = 5
     kp_joint = 5
     kv_joint = 0
-    redis_db.set("franka_panda::control::kp_pos", kp_pos)
-    redis_db.set("franka_panda::control::kv_pos", kv_pos)
-    redis_db.set("franka_panda::control::kp_ori", kp_ori)
-    redis_db.set("franka_panda::control::kv_ori", kv_ori)
-
-    ab.q = np.array(list(map(float, redis_db.get("franka_panda::sensor::q").decode("utf-8").strip().split(" "))))
-    ab.dq = np.array(list(map(float, redis_db.get("franka_panda::sensor::dq").decode("utf-8").strip().split(" "))))
 
     ee_offset = np.array([0., 0., 0.107])
-    q_des = np.array([0., np.pi/6., 0., -5./6. * np.pi, 0., 2./3. * np.pi, 0.])
-    x_0 = spatialdyn.position(ab, offset=ee_offset)
-    quat_des = spatialdyn.orientation(ab)
+    q_des     = np.array(q_home)
+    x_0       = spatialdyn.position(ab, offset=ee_offset)
+    quat_des  = spatialdyn.orientation(ab)
 
-    json_ee = json.loads(redis_db.get("franka_panda::model::inertia_ee").decode("utf8"))
-    m_ee = float(json_ee["m"])
-    com_ee = np.array(list(map(float, json_ee["com"])))
-    I_com_ee = np.array(list(map(float, json_ee["I_com"])))
-    I_load = spatialdyn.SpatialInertiad(m_ee, com_ee, I_com_ee)
-    ab.replace_load(I_load)
+    # ab.inertia_compensation = np.array([0.2, 0.1, 0.1])
+    # ab.stiction_coefficients = np.array([0.8, 0.8, 0.6])
+    # ab.stiction_activations = np.array([0.1, 0.1, 0.1])
+
+    # Initialize gains in Redis
+    redis_client.set(KEY_KP_POS, kp_pos)
+    redis_client.set(KEY_KV_POS, kv_pos)
+    redis_client.set(KEY_KP_ORI, kp_ori)
+    redis_client.set(KEY_KV_ORI, kv_ori)
+    redis_client.set(KEY_KP_JOINT, kp_joint)
+    redis_client.set(KEY_KV_JOINT, kv_joint)
+
+    # Get end-effector inertia from driver
+    redis_ee = redis_client.get(KEY_INERTIA_EE)
+    if redis_ee is not None:
+        json_ee  = json.loads(redis_ee.decode("utf8"))
+        m_ee     = float(json_ee["m"])
+        com_ee   = np.array(list(map(float, json_ee["com"])))
+        I_com_ee = np.array(list(map(float, json_ee["I_com"])))
+        I_load   = spatialdyn.SpatialInertiad(m_ee, com_ee, I_com_ee)
+        ab.replace_load(I_load)
+
+    # Create signal handler
+    global g_runloop
+    signal.signal(signal.SIGINT, signal_handler)
+
+    is_initialized = False  # Flag to set control mode on first iteration
 
     try:
-        while redis_db.get("franka_panda::driver::status").decode("utf8") == "running":
+        while g_runloop:
+            # Wait for next loop
             timer.sleep()
 
-            kp_pos = float(redis_db.get("franka_panda::control::kp_pos"))
-            kv_pos = float(redis_db.get("franka_panda::control::kv_pos"))
-            kp_ori = float(redis_db.get("franka_panda::control::kp_ori"))
-            kv_ori = float(redis_db.get("franka_panda::control::kv_ori"))
+            # Break if the driver is not running
+            if not args.sim and redis_client.get(KEY_DRIVER_STATUS).decode("utf8") != "running":
+                break
 
-            ab.q = np.array(list(map(float, redis_db.get("franka_panda::sensor::q").decode("utf-8").strip().split(" "))))
-            ab.dq = np.array(list(map(float, redis_db.get("franka_panda::sensor::dq").decode("utf-8").strip().split(" "))))
+            # Update gains
+            redis_pipe.get(KEY_KP_POS).get(KEY_KV_POS).get(KEY_KP_ORI).get(KEY_KV_ORI).get(KEY_KP_JOINT).get(KEY_KV_JOINT)
+            kp_pos, kv_pos, kp_ori, kv_ori, kp_joint, kv_joint = tuple(map(float, redis_pipe.execute()))
 
+            # Update robot state
+            if not args.sim:
+                ab.q  = decode_matlab(redis_client.get(KEY_SENSOR_Q))
+                ab.dq = decode_matlab(redis_client.get(KEY_SENSOR_DQ))
+
+            # Position
             x_des = np.array(x_0)
             x_des[1] += 0.2 * np.sin(timer.time_sim())
             x_des[0] += 0.2 * (np.cos(timer.time_sim()) - 1)
@@ -94,42 +150,59 @@ def main():
             dx_err = spatialdyn.linear_jacobian(ab, offset=ee_offset).dot(ab.dq)
             ddx = -kp_pos * x_err - kv_pos * dx_err
 
+            # Orientation
             quat = spatialdyn.orientation(ab)
             ori_err = spatialdyn.opspace.orientation_error(quat, quat_des)
             w_err = spatialdyn.angular_jacobian(ab).dot(ab.dq)
             dw = -kp_ori * ori_err - kv_ori * w_err
 
+            # Combine position/orientation
             ddx_dw = np.hstack((ddx, dw))
             J = spatialdyn.jacobian(ab, offset=ee_offset)
             N = np.eye(ab.dof)
             tau_cmd = spatialdyn.opspace.inverse_dynamics(ab, J, ddx_dw, N)
 
+            # Nullspace
             I = np.eye(ab.dof)
             q_err = ab.q - q_des
             dq_err = ab.dq
             ddq = -kp_joint * q_err - kv_joint * dq_err
             tau_cmd += spatialdyn.opspace.inverse_dynamics(ab, I, ddq, N)
 
-            #tau_cmd[6] = filter(tau_cmd[6], 0.7, 0.01)
-            tau_cmd[6] = filter(tau_cmd[6], 0.6, 0.1)
-            tau_cmd[5] = filter(tau_cmd[5], 0.8, 0.1)
-            tau_cmd[4] = filter(tau_cmd[4], 0.8, 0.1)
+            # Add friction compensation
+            tau_cmd += friction(ab, tau_cmd)
 
+            # Add gravity compensation
             tau_cmd += spatialdyn.gravity(ab)
 
-            redis_db.set("franka_panda::control::tau", " ".join(map(str, tau_cmd.tolist())))
-            redis_db.set("franka_panda::control::mode", "torque")
-            redis_db.set("franka_panda::trajectory::pos", " ".join(map(str, x.tolist())))
-            redis_db.set("franka_panda::trajectory::ori", " ".join(map(str, quat.coeffs.tolist())))
-            redis_db.set("franka_panda::trajectory::pos_err", " ".join(map(str, x_err.tolist())))
-            redis_db.set("franka_panda::trajectory::ori_err", " ".join(map(str, ori_err.tolist())))
+            # Send control torques
+            redis_client.set(KEY_CONTROL_TAU, encode_matlab(tau_cmd))
+
+            if args.sim:
+                # Integrate
+                spatialdyn.integrate(ab, tau_cmd, 0.001, friction=True)
+                redis_client.set(KEY_SENSOR_Q, encode_matlab(ab.q))
+                redis_client.set(KEY_SENSOR_DQ, encode_matlab(ab.dq))
+            elif not is_initialized:
+                # Send control mode on first iteration
+                redis_client.set(KEY_CONTROL_MODE, "torque")
+                is_initialized = True
+
+            # Send trajectory info for visualizer
+            redis_client.set(KEY_TRAJ_POS, encode_matlab(x))
+            redis_client.set(KEY_TRAJ_ORI, encode_matlab(quat.coeffs))
+            redis_client.set(KEY_TRAJ_POS_ERR, encode_matlab(x_err))
+            redis_client.set(KEY_TRAJ_ORI_ERR, encode_matlab(ori_err))
     except Exception as e:
         print(e)
 
-    redis_db.set("franka_panda::control::mode", "floating")
-    redis_db.set("franka_panda::control::tau", " ".join(["0."] * 7))
-    print("Cleared torques and set control mode to 'floating'.")
+    # Clear torques
+    redis_client.set(KEY_CONTROL_TAU, encode_matlab(np.zeros((ab.dof,))))
+    if not args.sim:
+        redis_client.set(KEY_CONTROL_MODE, "floating")
+        print("Cleared torques and set control mode to 'floating'.")
 
+    # Print simulation stats
     print("Simulated {}s in {}s.".format(timer.time_sim(), timer.time_elapsed()))
 
 if __name__ == "__main__":

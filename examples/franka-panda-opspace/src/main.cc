@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
       Eigen::Map<Eigen::Vector6d> I_com(arr_I_com.data());
       SpatialDyn::SpatialInertiad I_load(m, com, I_com);
       if (ab.inertia_load().find(ab.dof() - 1) == ab.inertia_load().end() ||
-	  ab.inertia_load().at(ab.dof() - 1) != I_load) {
+          ab.inertia_load().at(ab.dof() - 1) != I_load) {
         ab.ReplaceLoad(SpatialDyn::SpatialInertiad(m, com, I_com));
       }
     }

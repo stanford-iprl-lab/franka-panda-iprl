@@ -1,10 +1,10 @@
 /**
  * model.h
  *
- * Copyright 2018. All Rights Reserved.
+ * Copyright 2019. All Rights Reserved.
  * Stanford IPRL
  *
- * Created: January 07, 2018
+ * Created: January 07, 2019
  * Authors: Toki Migimatsu
  */
 
@@ -41,6 +41,15 @@ class Model {
 
   const Eigen::Vector3d& g() const { return g_; }
 
+  const Eigen::Vector3d& inertia_compensation() const { return inertia_compensation_; }
+  void set_inertia_compensation(const Eigen::Vector3d& coeff);
+
+  const Eigen::Vector3d& stiction_coefficients() const { return stiction_coefficients_; }
+  void set_stiction_coefficients(const Eigen::Vector3d& coeff);
+
+  const Eigen::Vector3d& stiction_activations() const { return stiction_activations_; }
+  void set_stiction_activations(const Eigen::Vector3d& coeff);
+
  private:
 
   const size_t dof_ = 7;
@@ -53,6 +62,12 @@ class Model {
 
   Eigen::Vector3d g_ = Eigen::Vector3d(0., 0., -9.81);
 
+  Eigen::Vector3d inertia_compensation_ = Eigen::Vector3d(0.2, 0.1, 0.1);
+
+  Eigen::Vector3d stiction_coefficients_ = Eigen::Vector3d(0.8, 0.8, 0.6);
+
+  Eigen::Vector3d stiction_activations_ = Eigen::Vector3d(0.1, 0.1, 0.1);
+
 };
 
 Eigen::Isometry3d CartesianPose(const Model& model, int link = -1);
@@ -64,6 +79,8 @@ Eigen::MatrixXd Inertia(const Model& model);
 Eigen::VectorXd CentrifugalCoriolis(const Model& model);
 
 Eigen::VectorXd Gravity(const Model& model);
+
+Eigen::VectorXd Friction(const Model& model, Eigen::Ref<const Eigen::VectorXd> tau);
 
 }  // namespace FrankaPanda
 

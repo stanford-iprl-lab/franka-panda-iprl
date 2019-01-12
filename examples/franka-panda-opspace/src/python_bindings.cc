@@ -36,9 +36,16 @@ PYBIND11_MODULE(spatialdyn_frankapanda, m) {
                     &ArticulatedBody::set_dq)
       .def_property("inertia_compensation", &ArticulatedBody::inertia_compensation,
                     &ArticulatedBody::set_inertia_compensation)
+      .def_property("stiction_coefficients", &ArticulatedBody::stiction_coefficients,
+                    &ArticulatedBody::set_stiction_coefficients)
+      .def_property("stiction_activations", &ArticulatedBody::stiction_activations,
+                    &ArticulatedBody::set_stiction_activations)
+      .def_property_readonly("franka_panda", &ArticulatedBody::franka_panda)
       .def("add_load", &ArticulatedBody::AddLoad, "inertia"_a, "idx_link"_a = -1)
       .def("replace_load", &ArticulatedBody::ReplaceLoad, "inertia"_a, "idx_link"_a = -1)
       .def("clear_load", &ArticulatedBody::ClearLoad, "idx_link"_a = -1);
+
+  m.def("friction", py::overload_cast<const ArticulatedBody&, Eigen::Ref<const Eigen::VectorXd>>(&Friction), "ab"_a, "tau"_a);
 
 }
 

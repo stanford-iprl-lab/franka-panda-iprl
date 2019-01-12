@@ -32,9 +32,12 @@ PYBIND11_MODULE(frankapanda, m) {
       .def_property("com_load", &Model::com_load, &Model::set_com_load)
       .def_property("I_com_load", &Model::I_com_load, &Model::set_I_com_load)
       .def_property_readonly("I_com_load_matrix", &Model::I_com_load_matrix)
-      .def_property_readonly("g", &Model::g);
+      .def_property_readonly("g", &Model::g)
+      .def_property("inertia_compensation", &Model::inertia_compensation, &Model::set_inertia_compensation)
+      .def_property("stiction_coefficients", &Model::stiction_coefficients, &Model::set_stiction_coefficients)
+      .def_property("stiction_activations", &Model::stiction_activations, &Model::set_stiction_activations);
 
-  // Forward kinematics
+  // Dynamics
   m.def("cartesian_pose",
         [](const Model& model, int link) -> Eigen::Matrix4d {
           Eigen::Isometry3d T = CartesianPose(model, link);
@@ -43,7 +46,8 @@ PYBIND11_MODULE(frankapanda, m) {
    .def("jacobian", &Jacobian, "model"_a, "link"_a = -1)
    .def("inertia", &Inertia, "model"_a)
    .def("centrifugal_coriolis", &CentrifugalCoriolis, "model"_a)
-   .def("gravity", &Gravity, "model"_a);
+   .def("gravity", &Gravity, "model"_a)
+   .def("friction", &Friction, "model"_a, "tau"_a);
 
 }
 

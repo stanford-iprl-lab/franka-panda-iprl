@@ -43,11 +43,25 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
     ComputeCentrifugalCoriolis();
   }
 
-  const Eigen::Vector3d& inertia_compensation() const { return inertia_compensation_; }
+  const Eigen::Vector3d& inertia_compensation() const { return franka_panda_.inertia_compensation(); }
 
   void set_inertia_compensation(const Eigen::Vector3d& coeffs) {
-    inertia_compensation_ = coeffs;
+    franka_panda_.set_inertia_compensation(coeffs);
   }
+
+  const Eigen::Vector3d& stiction_coefficients() const { return franka_panda_.stiction_coefficients(); }
+
+  void set_stiction_coefficients(const Eigen::Vector3d& coeffs) {
+    franka_panda_.set_stiction_coefficients(coeffs);
+  }
+
+  const Eigen::Vector3d& stiction_activations() const { return franka_panda_.stiction_activations(); }
+
+  void set_stiction_activations(const Eigen::Vector3d& coeffs) {
+    franka_panda_.set_stiction_activations(coeffs);
+  }
+
+  const FrankaPanda::Model& franka_panda() const { return franka_panda_; }
 
   virtual void AddLoad(const SpatialDyn::SpatialInertiad& inertia, int idx_link = -1) override {
     if (idx_link < 0) idx_link += dof();
@@ -87,7 +101,7 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
   void ComputeInertia() {
     auto& crba = cache_->crba_data_;
     crba.A = Inertia(franka_panda_);
-    crba.A.diagonal().tail<3>() += inertia_compensation_;
+    crba.A.diagonal().tail<3>() += franka_panda_.inertia_compensation();
     crba.is_computed = true;
   }
 
@@ -105,9 +119,11 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
 
   mutable FrankaPanda::Model franka_panda_;
 
-  Eigen::Vector3d inertia_compensation_ = Eigen::Vector3d(0.2, 0.2, 0.1);
-
 };
+
+Eigen::VectorXd Friction(const FrankaPanda::ArticulatedBody& ab, Eigen::Ref<const Eigen::VectorXd> tau) {
+  return Friction(ab.franka_panda(), tau);
+}
 
 }  // namespace FrankaPanda
 

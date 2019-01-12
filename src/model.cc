@@ -11,6 +11,7 @@
 #include "FrankaPanda/model.h"
 
 #include <array>      // std::array
+#include <cmath>      // std::abs
 #include <exception>  // std::invalid_argument
 
 #include "libfcimodels.h"
@@ -48,6 +49,27 @@ void Model::set_I_com_load_matrix(Eigen::Ref<const Eigen::Matrix3d> I_com) {
   Eigen::Matrix<double,6,1> I_com_flat;
   I_com_flat << I_com(0, 0), I_com(1, 1), I_com(2, 2), I_com(0, 1), I_com(0, 2), I_com(1, 2);
   set_I_com_load(I_com_flat);
+}
+
+void Model::set_inertia_compensation(const Eigen::Vector3d& coeff) {
+  if ((coeff.array() < 0.).any()) {
+    throw std::invalid_argument("Model::set_inertia_compensation(): Coefficients must be positive.");
+  }
+  inertia_compensation_ = coeff;
+}
+
+void Model::set_stiction_coefficients(const Eigen::Vector3d& coeff) {
+  if ((coeff.array() < 0.).any()) {
+    throw std::invalid_argument("Model::set_stiction_coefficients(): Coefficients must be positive.");
+  }
+  stiction_coefficients_ = coeff;
+}
+
+void Model::set_stiction_activations(const Eigen::Vector3d& coeff) {
+  if ((coeff.array() < 0.).any()) {
+    throw std::invalid_argument("Model::set_stiction_activations(): Coefficients must be positive.");
+  }
+  stiction_activations_ = coeff;
 }
 
 Eigen::Isometry3d CartesianPose(const Model& model, int link) {
@@ -117,6 +139,7 @@ Eigen::MatrixXd Inertia(const Model& model) {
   Eigen::MatrixXd A_output(model.dof(), model.dof());
   M_NE(model.q().data(), model.I_com_load_matrix().data(), model.m_load(),
        model.com_load().data(), A_output.data());
+  A_output.diagonal().tail<3>() += model.inertia_compensation();
   return A_output;
 }
 
@@ -132,6 +155,35 @@ Eigen::VectorXd Gravity(const Model& model) {
   g_NE(model.q().data(), model.g().data(), model.m_load(),
        model.com_load().data(), G_output.data());
   return G_output;
+}
+
+double Sign(double x, double epsilon = 0.01) {
+  if (x > epsilon) {
+    return 1.;
+  } else if (x < -epsilon) {
+    return -1.;
+  }
+  return 0.;
+}
+
+Eigen::VectorXd Friction(const Model& model, Eigen::Ref<const Eigen::VectorXd> tau) {
+  Eigen::VectorXd F = Eigen::VectorXd::Zero(model.dof());
+  for (size_t idx = 0; idx < 3; idx++) {
+    const size_t i = idx + model.dof() - 3;
+    const double mag_tau = std::abs(tau(i));
+    const double threshold = model.stiction_coefficients()(idx);
+    if (mag_tau >= threshold) continue;
+
+    const double epsilon = model.stiction_activations()(idx);
+    if (mag_tau >= epsilon) {
+      F(i) = Sign(tau(i)) * threshold - tau(i);
+      continue;
+    }
+
+    double dx = tau(i) / epsilon - Sign(tau(i));
+    F(i) = -Sign(tau(i)) * threshold * (dx*dx - 1.) - tau(i);
+  }
+  return F;
 }
 
 }  // namespace FrankaPanda
