@@ -14,6 +14,8 @@
 #include <future>     // std::future
 #include <iostream>   // std::cout
 #include <string>     // std::string
+#include <stdlib.h>   // realpath
+#include <unistd.h>   // getcwd
 
 #include <SpatialDyn/parsers/json.h>
 #include <SpatialDyn/parsers/urdf.h>
@@ -46,6 +48,7 @@ const std::string KEY_TRAJ_ORI      = KEY_PREFIX + "trajectory::ori";
 const std::string KEY_TRAJ_POS_ERR  = KEY_PREFIX + "trajectory::pos_err";
 const std::string KEY_TRAJ_ORI_ERR  = KEY_PREFIX + "trajectory::ori_err";
 const std::string KEY_MODEL         = KEY_PREFIX + "model";
+const std::string KEY_WEB_RESOURCES = "webapp::resources";
 
 // Controller gains
 const std::string KEY_KP_POS   = KEY_PREFIX + "control::kp_pos";
@@ -92,12 +95,24 @@ int main(int argc, char* argv[]) {
 
   // Send model to visualizer
   redis_client.sync_set(KEY_MODEL, SpatialDyn::Json::Serialize(ab).dump());
+  std::string path_urdf;
+  {
+    char* c_path_cwd = get_current_dir_name();
+    std::string path_cwd(c_path_cwd);
+    free(c_path_cwd);
+    path_urdf = path_cwd + "/" + argv[1];
+    char* c_path_urdf = realpath(path_urdf.c_str(), NULL);
+    path_urdf = c_path_urdf;
+    free(c_path_urdf);
+    path_urdf = path_urdf.substr(0, path_urdf.find_last_of("/\\") + 1);
+  }
+  redis_client.hset(KEY_WEB_RESOURCES, "simulator", path_urdf);
 
   // Initialize parameters
-  double kp_pos = 40.;
-  double kv_pos = 5.;
-  double kp_ori = 40.;
-  double kv_ori = 5.;
+  double kp_pos   = 40.;
+  double kv_pos   = 5.;
+  double kp_ori   = 40.;
+  double kv_ori   = 5.;
   double kp_joint = 5.;
   double kv_joint = 0.;
 

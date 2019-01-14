@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import signal
 import sys
 import time
@@ -47,17 +48,18 @@ def main():
     # GET keys
     KEY_SENSOR_Q      = KEY_PREFIX + "sensor::q"
     KEY_SENSOR_DQ     = KEY_PREFIX + "sensor::dq"
-    KEY_MODEL_EE    = KEY_PREFIX + "model::inertia_ee"
+    KEY_MODEL_EE      = KEY_PREFIX + "model::inertia_ee"
     KEY_DRIVER_STATUS = KEY_PREFIX + "driver::status"
 
     # SET keys
-    KEY_CONTROL_TAU  = KEY_PREFIX + "control::tau"
-    KEY_CONTROL_MODE = KEY_PREFIX + "control::mode"
-    KEY_TRAJ_POS     = KEY_PREFIX + "trajectory::pos"
-    KEY_TRAJ_ORI     = KEY_PREFIX + "trajectory::ori"
-    KEY_TRAJ_POS_ERR = KEY_PREFIX + "trajectory::pos_err"
-    KEY_TRAJ_ORI_ERR = KEY_PREFIX + "trajectory::ori_err"
-    KEY_MODEL        = KEY_PREFIX + "model"
+    KEY_CONTROL_TAU   = KEY_PREFIX + "control::tau"
+    KEY_CONTROL_MODE  = KEY_PREFIX + "control::mode"
+    KEY_TRAJ_POS      = KEY_PREFIX + "trajectory::pos"
+    KEY_TRAJ_ORI      = KEY_PREFIX + "trajectory::ori"
+    KEY_TRAJ_POS_ERR  = KEY_PREFIX + "trajectory::pos_err"
+    KEY_TRAJ_ORI_ERR  = KEY_PREFIX + "trajectory::ori_err"
+    KEY_MODEL         = KEY_PREFIX + "model"
+    KEY_WEB_RESOURCES = "webapp::resources"
 
     # Controller gains
     KEY_KP_POS   = KEY_PREFIX + "control::kp_pos"
@@ -86,6 +88,8 @@ def main():
 
     # Send model to visualizer
     redis_client.set(KEY_MODEL, str(ab))
+    path_urdf = os.path.realpath(os.path.join(os.path.dirname(__file__), args.urdf))
+    redis_client.hset(KEY_WEB_RESOURCES, "simulator", os.path.dirname(path_urdf))
 
     # Initialize parameters
     kp_pos   = 40.
