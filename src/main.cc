@@ -68,7 +68,7 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   const std::string KEY_DRIVER_STATUS = args.key_prefix + args.key_driver_status;
 
   // Connect to Redis
-  utils::RedisClient redis_client;
+  ctrl_utils::RedisClient redis_client;
   redis_client.connect();
 
   // Set default Redis keys
@@ -82,7 +82,7 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   redis_client.sync_commit();
 
   // Set loop timer to 1kHz (to match Franka Panda's control frequency)
-  utils::Timer timer(1000);
+  ctrl_utils::Timer timer(1000);
 
   while (*globals->runloop) {
     try {

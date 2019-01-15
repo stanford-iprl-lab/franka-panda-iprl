@@ -25,9 +25,9 @@ template<unsigned long Dim>
 std::string ArrayToString(const std::array<double, Dim>& arr, bool use_json) {
   Eigen::Map<const Eigen::VectorXd> map(arr.data(), arr.size());
   if (use_json) {
-    utils::Eigen::EncodeJson(map);
+    ctrl_utils::Eigen::EncodeJson(map);
   }
-  return utils::Eigen::EncodeMatlab(map);
+  return ctrl_utils::Eigen::EncodeMatlab(map);
 }
 
 template<unsigned long Dim>
@@ -36,9 +36,9 @@ std::array<double, Dim> StringToArray(const std::string str, bool use_json) {
   Eigen::Map<Eigen::VectorXd> map(arr.data(), arr.size());
   Eigen::MatrixXd M;
   if (use_json) {
-    M = utils::Eigen::DecodeJson<Eigen::MatrixXd>(str);
+    M = ctrl_utils::Eigen::DecodeJson<Eigen::MatrixXd>(str);
   } else {
-    M = utils::Eigen::DecodeMatlab<Eigen::MatrixXd>(str);
+    M = ctrl_utils::Eigen::DecodeMatlab<Eigen::MatrixXd>(str);
   }
   Eigen::Map<Eigen::VectorXd> m(&M(0, 0), M.size());
   map = m;
@@ -63,9 +63,9 @@ std::string MatrixToString(const std::array<double, Dim>& arr, bool use_json) {
 
   Eigen::Map<const Eigen::MatrixXd> map(arr.data(), Rows, Cols);
   if (use_json) {
-    utils::Eigen::EncodeJson(map);
+    ctrl_utils::Eigen::EncodeJson(map);
   }
-  return utils::Eigen::EncodeMatlab(map);
+  return ctrl_utils::Eigen::EncodeMatlab(map);
 }
 
 
@@ -76,7 +76,7 @@ std::array<double, 16> StringToTransform(const std::string str, bool use_json) {
   if (use_json) {
     // TODO
   } else {
-    T = utils::Eigen::DecodeMatlab<Eigen::MatrixXd>(str);
+    T = ctrl_utils::Eigen::DecodeMatlab<Eigen::MatrixXd>(str);
   }
 
   if (T.size() == 16) {
