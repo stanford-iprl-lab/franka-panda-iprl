@@ -20,8 +20,19 @@ if(NOT pybind11_FOUND)
     add_subdirectory(${PYBIND11_LIB_DIR} ${CMAKE_CURRENT_BINARY_DIR}/pybind11)
 endif()
 
+find_package(spatial_dyn 1.0.0 QUIET)
+
 pybind11_add_module(frankapanda franka_panda.cc)
 target_link_libraries(frankapanda
     PUBLIC
-        pybind11::pybind11
-        franka_panda::franka_panda)
+        franka_panda::franka_panda
+        pybind11::pybind11)
+
+if(spatial_dyn_FOUND)
+    pybind11_add_module(spatialdyn articulated_body.cc)
+    target_link_libraries(spatialdyn
+        PUBLIC
+            franka_panda::franka_panda
+            pybind11::pybind11
+            spatial_dyn::spatial_dyn)
+endif()

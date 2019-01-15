@@ -1,5 +1,5 @@
 /**
- * python_bindings.cc
+ * articulated_body.cc
  *
  * Copyright 2019. All Rights Reserved.
  * IPRL
@@ -9,19 +9,18 @@
  * Authors: Toki Migimatsu
  */
 
-#include <Eigen/Eigen>
-
+#include <spatial_dyn/spatial_dyn.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
 
-#include "articulated_body.h"
+#include "franka_panda/articulated_body.h"
 
 namespace franka_panda {
 
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-PYBIND11_MODULE(spatialdyn_frankapanda, m) {
+PYBIND11_MODULE(spatialdyn, m) {
 
   // Articulated body
   py::class_<ArticulatedBody, spatial_dyn::ArticulatedBody>(m, "ArticulatedBody")

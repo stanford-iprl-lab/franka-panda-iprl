@@ -10,28 +10,16 @@ import time
 import redis
 import numpy as np
 
-import spatialdyn
+import ctrlutils
+from ctrlutils.numpy import *
 import frankapanda
-from spatialdyn_frankapanda import *
+import spatialdyn
 
 g_runloop = True
 
 def signal_handler(sig, frame):
     global g_runloop
     g_runloop = False
-
-def encode_matlab(A):
-    if len(A.shape) == 1:
-        return " ".join(map(str, A.tolist()))
-    return "; ".join(" ".join(map(str, row)) for row in A.tolist())
-
-def decode_matlab(s):
-    try:
-        s = s.decode("utf-8")
-    except AttributeError:
-        pass
-    return np.array([list(map(float, row.strip().split())) for row in s.strip().split(";")]).squeeze()
-
 
 def main():
     # Parse args
@@ -72,10 +60,10 @@ def main():
     # Create Redis client and timer
     redis_client = redis.Redis("127.0.0.1")
     redis_pipe   = redis_client.pipeline(transaction=False)
-    timer = spatialdyn.Timer(1000)
+    timer = ctrlutils.Timer(1000)
 
     # Load robot
-    ab = ArticulatedBody(spatialdyn.urdf.load_model(args.urdf))
+    ab = frankapanda.ArticulatedBody(spatialdyn.urdf.load_model(args.urdf))
     q_home = np.array([0., -np.pi/6., 0., -5./6. * np.pi, 0., 2./3. * np.pi, 0.])
     if args.sim:
         ab.q  = q_home
@@ -179,7 +167,7 @@ def main():
             tau_cmd += spatialdyn.opspace.inverse_dynamics(ab, I, ddq, N)
 
             # Add friction compensation
-            tau_cmd += friction(ab, tau_cmd)
+            tau_cmd += frankapanda.friction(ab, tau_cmd)
 
             # Add gravity compensation
             tau_cmd += spatialdyn.gravity(ab)
