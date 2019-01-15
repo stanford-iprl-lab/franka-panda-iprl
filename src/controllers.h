@@ -21,7 +21,7 @@
 
 #include "args.h"
 
-namespace FrankaDriver {
+namespace franka_driver {
 
 struct SharedMemory;
 
@@ -47,6 +47,6 @@ std::function<franka::CartesianPose(const franka::RobotState&, franka::Duration)
 CreateCartesianPoseController(const Args& args, const std::shared_ptr<SharedMemory>& globals,
                               const franka::Model& model);
 
-}  // namespace FrankaDriver
+}  // namespace franka_driver
 
 #endif  // FRANKA_DRIVER_CONTROLLERS_H_

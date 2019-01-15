@@ -15,7 +15,7 @@
 #include <Eigen/Eigen>
 #include <yaml-cpp/yaml.h>
 
-namespace FrankaDriver {
+namespace franka_driver {
 
 std::array<double, 16> ParseTransform(const YAML::Node& yaml) {
   std::array<double, 16> arr;
@@ -226,4 +226,4 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
   return os;
 }
 
-}  // namespace FrankaDriver
+}  // namespace franka_driver

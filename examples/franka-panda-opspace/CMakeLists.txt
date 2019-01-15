@@ -37,20 +37,15 @@ target_compile_options(${FRANKA_OPSPACE_BIN} PRIVATE
     $<$<CONFIG:RELEASE>:-O3>
 )
 
-find_package(SpatialDyn 1.0.0 REQUIRED)
-find_package(FrankaPanda 1.0.0 REQUIRED)
-
-find_package(yaml-cpp 0.6.2 REQUIRED)
-add_library(yaml-cpp::yaml-cpp INTERFACE IMPORTED)
-set_target_properties(yaml-cpp::yaml-cpp PROPERTIES
-    INTERFACE_LINK_LIBRARIES yaml-cpp
-    INTERFACE_INCLUDE_DIRECTORIES ${YAML_CPP_INCLUDE_DIR})
+find_package(spatial_dyn 1.0.0 REQUIRED)
+find_package(franka_panda 1.0.0 REQUIRED)
+find_package(ctrl_utils 1.0.0 REQUIRED)
 
 target_link_libraries(${FRANKA_OPSPACE_BIN}
     PRIVATE
-        SpatialDyn::SpatialDyn
-        FrankaPanda::FrankaPanda
-        yaml-cpp::yaml-cpp
+        spatial_dyn::spatial_dyn
+        franka_panda::franka_panda
+        ctrl_utils::ctrl_utils
 )
 
 # Attach sources
@@ -68,6 +63,6 @@ endif()
 pybind11_add_module(spatialdyn_frankapanda ${FRANKA_OPSPACE_SRC_DIR}/python_bindings.cc)
 target_link_libraries(spatialdyn_frankapanda
     PUBLIC
-        SpatialDyn::SpatialDyn
-        FrankaPanda::FrankaPanda
+        spatial_dyn::spatial_dyn
+        franka_panda::franka_panda
         pybind11::pybind11)

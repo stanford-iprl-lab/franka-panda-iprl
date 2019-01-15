@@ -1,0 +1,26 @@
+############################################################
+# CMakeLists to download ctrlutils
+#
+# Copyright 2018. All Rights Reserved.
+#
+# Created: September 16, 2018
+# Authors: Toki Migimatsu
+############################################################
+
+cmake_minimum_required(VERSION 3.6)
+
+project(ctrl_utils-download NONE)
+
+include(ExternalProject)
+ExternalProject_Add(ctrlutils
+    # Directories
+    PREFIX ${CMAKE_BINARY_DIR}/ctrl_utils
+    SOURCE_DIR ${FRANKA_PANDA_EXT_DIR}/ctrl-utils.git
+    BINARY_DIR ${CMAKE_BINARY_DIR}/ctrl_utils/build
+    # Download
+    GIT_REPOSITORY https://github.com/tmigimatsu/ctrl-utils.git
+    # Configure
+    CMAKE_ARGS -DBUILD_TESTING=OFF
+    # Install
+    INSTALL_COMMAND ""
+)

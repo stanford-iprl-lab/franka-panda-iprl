@@ -22,7 +22,7 @@ if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 
 # Define directories
-set(FRANKA_PANDA_LIB FrankaPanda)
+set(FRANKA_PANDA_LIB franka_panda)
 set(FRANKA_PANDA_BIN franka_panda_driver)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(FRANKA_PANDA_CMAKE_DIR ${PROJECT_SOURCE_DIR}/cmake)
@@ -57,46 +57,22 @@ configure_file(${FRANKA_PANDA_CMAKE_DIR}/FindEigen3.cmake.in
 configure_file(${FRANKA_PANDA_CMAKE_DIR}/Findyaml-cpp.cmake.in
     ${CMAKE_BINARY_DIR}/Findyaml-cpp.cmake @ONLY)
 
-
-find_package(cpp_redis 4.3.1 QUIET)
-if(NOT cpp_redis_FOUND)
-    download_package(cpp_redis)
-    list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_BINARY_DIR})
-    find_package(cpp_redis 4.3.1 MODULE REQUIRED)
-    list(REMOVE_AT CMAKE_MODULE_PATH 0)
-endif()
-
-find_package(Eigen3 3.3.5 QUIET)
-if(NOT Eigen3_FOUND)
-    download_package(Eigen3)
-    find_package(Eigen3 3.3.5 REQUIRED PATHS ${CMAKE_BINARY_DIR}/Eigen3/build)
-endif()
-
 find_package(Franka 0.5.0 QUIET)
 if (NOT Franka_FOUND)
     download_package(Franka)
     find_package(Franka 0.5.0 REQUIRED PATHS ${CMAKE_BINARY_DIR}/libfranka/build)
 endif()
 
-find_package(yaml-cpp 0.6.2 QUIET)
-if(NOT yaml-cpp_FOUND)
-    download_package(yaml-cpp)
-    list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_BINARY_DIR})
-    find_package(yaml-cpp 0.6.2 REQUIRED)
-    list(REMOVE_AT CMAKE_MODULE_PATH 0)
-else()
-    add_library(yaml-cpp::yaml-cpp INTERFACE IMPORTED)
-    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES
-        INTERFACE_LINK_LIBRARIES yaml-cpp
-        INTERFACE_INCLUDE_DIRECTORIES ${YAML_CPP_INCLUDE_DIR})
+find_package(ctrl_utils 1.0.0 QUIET)
+if(NOT ctrl_utils_FOUND)
+    download_package(ctrl_utils)
+    find_package(ctrl_utils 1.0.0 REQUIRED)
 endif()
 
 target_link_libraries(${FRANKA_PANDA_BIN}
     PRIVATE
-        cpp_redis::cpp_redis
-        Eigen3::Eigen
+        ctrl_utils::ctrl_utils
         Franka::Franka
-        yaml-cpp::yaml-cpp
         atomic  # Needed for gcc 5.4.0
 )
 
@@ -113,7 +89,7 @@ target_sources(${FRANKA_PANDA_BIN}
         ${FRANKA_PANDA_SRC_DIR}/controllers.cc
 )
 
-# Create FrankaPanda library
+# Create franka_panda library
 add_library(${FRANKA_PANDA_LIB} SHARED)
 add_library(${FRANKA_PANDA_LIB}::${FRANKA_PANDA_LIB} ALIAS ${FRANKA_PANDA_LIB})
 

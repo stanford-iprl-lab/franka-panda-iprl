@@ -8,7 +8,7 @@
  * Authors: Toki Migimatsu
  */
 
-#include "FrankaPanda/model.h"
+#include "franka_panda/model.h"
 
 #include <array>      // std::array
 #include <cmath>      // std::abs
@@ -16,7 +16,7 @@
 
 #include "libfcimodels.h"
 
-namespace FrankaPanda {
+namespace franka_panda {
 
 void Model::set_q(Eigen::Ref<const Eigen::VectorXd> q) {
   if (q.size() != static_cast<int>(dof_)) {
@@ -186,4 +186,4 @@ Eigen::VectorXd Friction(const Model& model, Eigen::Ref<const Eigen::VectorXd> t
   return F;
 }
 
-}  // namespace FrankaPanda
+}  // namespace franka_panda

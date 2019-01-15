@@ -14,6 +14,6 @@ list(APPEND CMAKE_MODULE_PATH ${SPATIAL_DYN_CMAKE_DIR})
 find_dependency(Eigen3 3.3.5 REQUIRED)
 list(REMOVE_AT CMAKE_MODULE_PATH -1)
 
-if(NOT TARGET FrankaPanda::FrankaPanda)
-    include("${SPATIAL_DYN_CMAKE_DIR}/FrankaPandaTargets.cmake")
+if(NOT TARGET franka_panda::franka_panda)
+    include("${SPATIAL_DYN_CMAKE_DIR}/franka_pandaTargets.cmake")
 endif()

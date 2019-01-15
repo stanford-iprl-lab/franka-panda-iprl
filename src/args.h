@@ -17,7 +17,7 @@
 
 #include <franka/robot.h>
 
-namespace FrankaDriver {
+namespace franka_driver {
 
 struct Args {
   std::string ip_robot = "172.16.0.2";
@@ -84,6 +84,6 @@ Args ParseArgs(int argc, char* argv[]);
 
 std::ostream& operator<<(std::ostream& os, const Args& args);
 
-}  // namespace FrankaDriver
+}  // namespace franka_driver
 
 #endif  // FRANKA_DRIVER_ARGS_H_

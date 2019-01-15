@@ -16,7 +16,7 @@
 
 #include "shared_memory.h"
 
-namespace FrankaDriver {
+namespace franka_driver {
 
 static const std::map<std::string, ControlMode> kControlModeToString = {
   {"floating", ControlMode::FLOATING},

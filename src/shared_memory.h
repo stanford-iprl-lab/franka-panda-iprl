@@ -17,7 +17,7 @@
 
 #include "controllers.h"
 
-namespace FrankaDriver {
+namespace franka_driver {
 
 enum class ControlMode;
 
@@ -43,6 +43,6 @@ struct SharedMemory {
   volatile sig_atomic_t* runloop = nullptr;
 };
 
-}  // namespace FrankaDriver
+}  // namespace franka_driver
 
 #endif  // FRANKA_DRIVER_SHARED_MEMORY_H_

@@ -20,19 +20,19 @@
 #include <signal.h>    // signal, sig_atomic_t, SIGINT
 #include <thread>      // std::thread
 
-#include <cpp_redis/cpp_redis>
 #include <Eigen/Eigen>
-#include <yaml-cpp/yaml.h>
+#include <cpp_redis/cpp_redis>
+#include <ctrl_utils/redis_client.h>
+#include <ctrl_utils/timer.h>
 #include <franka/exception.h>
 #include <franka/robot.h>
 #include <franka/model.h>
+#include <yaml-cpp/yaml.h>
 
 #include "args.h"
 #include "controllers.h"
 #include "shared_memory.h"
 #include "string_utils.h"
-#include "timer.h"
-#include "redis_client.h"
 
 namespace Eigen {
 
@@ -47,7 +47,7 @@ void stop(int signal) { g_runloop = false; }
 
 }  // namespace
 
-namespace FrankaDriver {
+namespace franka_driver {
 
 enum class Status { RUNNING, OFF };
 
@@ -68,7 +68,7 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   const std::string KEY_DRIVER_STATUS = args.key_prefix + args.key_driver_status;
 
   // Connect to Redis
-  SpatialDyn::RedisClient redis_client;
+  utils::RedisClient redis_client;
   redis_client.connect();
 
   // Set default Redis keys
@@ -82,7 +82,7 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   redis_client.sync_commit();
 
   // Set loop timer to 1kHz (to match Franka Panda's control frequency)
-  SpatialDyn::Timer timer(1000);
+  utils::Timer timer(1000);
 
   while (*globals->runloop) {
     try {
@@ -148,26 +148,26 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   redis_client.sync_commit();
 }
 
-void RunFrankaController(const Args& args, const std::shared_ptr<FrankaDriver::SharedMemory>& globals,
+void RunFrankaController(const Args& args, const std::shared_ptr<SharedMemory>& globals,
                          franka::Robot& robot, const franka::Model& model) {
-  FrankaDriver::ControlMode control_mode = globals->control_mode;
+  ControlMode control_mode = globals->control_mode;
   while (globals->runloop) {
     try {
       switch (control_mode) {
-        case FrankaDriver::ControlMode::FLOATING:
-        case FrankaDriver::ControlMode::TORQUE:
-          robot.control(FrankaDriver::CreateTorqueController(args, globals, model),
+        case ControlMode::FLOATING:
+        case ControlMode::TORQUE:
+          robot.control(CreateTorqueController(args, globals, model),
                         args.limit_rate, args.lowpass_freq_cutoff);  // Blocking
           break;
-        case FrankaDriver::ControlMode::CARTESIAN_POSE:
-          robot.control(FrankaDriver::CreateCartesianPoseController(args, globals, model),
+        case ControlMode::CARTESIAN_POSE:
+          robot.control(CreateCartesianPoseController(args, globals, model),
                         franka::ControllerMode::kCartesianImpedance,
                         args.limit_rate, args.lowpass_freq_cutoff);  // Blocking
           break;
         default:
           throw std::runtime_error("Controller mode " + ControlModeToString(control_mode) + " not supported.");
       }
-    } catch (const FrankaDriver::SwitchControllerException& e) {
+    } catch (const SwitchControllerException& e) {
       // Switch controllers
       control_mode = globals->control_mode;
       std::cout << "Switching controllers from \"" << e.what() << "\" to \""
@@ -176,14 +176,14 @@ void RunFrankaController(const Args& args, const std::shared_ptr<FrankaDriver::S
   }
 }
 
-}  // namespace FrankaDriver
+}  // namespace franka_driver
 
 int main(int argc, char* argv[]) {
   std::thread redis_thread;
 
   try {
     // Parse args
-    FrankaDriver::Args args = FrankaDriver::ParseArgs(argc, argv);
+    franka_driver::Args args = franka_driver::ParseArgs(argc, argv);
     std::cout << args << std::endl;
 
     // Connect to robot
@@ -212,11 +212,11 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, stop);
 
     // Create communication interface between Redis and robot threads
-    auto globals = std::make_shared<FrankaDriver::SharedMemory>();
+    auto globals = std::make_shared<franka_driver::SharedMemory>();
     globals->runloop = &g_runloop;
 
     // Run Redis thread
-    redis_thread = std::thread(FrankaDriver::RedisThread, args, globals);
+    redis_thread = std::thread(franka_driver::RedisThread, args, globals);
 
     // Run controller thread
     RunFrankaController(args, globals, robot, model);

@@ -16,7 +16,7 @@
 
 #include "articulated_body.h"
 
-namespace FrankaPanda {
+namespace franka_panda {
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -24,10 +24,10 @@ using namespace pybind11::literals;
 PYBIND11_MODULE(spatialdyn_frankapanda, m) {
 
   // Articulated body
-  py::class_<ArticulatedBody, SpatialDyn::ArticulatedBody>(m, "ArticulatedBody")
+  py::class_<ArticulatedBody, spatial_dyn::ArticulatedBody>(m, "ArticulatedBody")
       .def(py::init<>())
       .def(py::init<const std::string&>())
-      .def(py::init<const SpatialDyn::ArticulatedBody&>())
+      .def(py::init<const spatial_dyn::ArticulatedBody&>())
       .def_property("q",
                     (const Eigen::VectorXd& (ArticulatedBody::*)(void) const) &ArticulatedBody::q,
                     &ArticulatedBody::set_q)
@@ -49,4 +49,4 @@ PYBIND11_MODULE(spatialdyn_frankapanda, m) {
 
 }
 
-}  // namespace SpatialDyn
+}  // namespace franka_panda

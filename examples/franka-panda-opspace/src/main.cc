@@ -17,9 +17,11 @@
 #include <stdlib.h>   // realpath
 #include <unistd.h>   // getcwd
 
-#include <SpatialDyn/parsers/json.h>
-#include <SpatialDyn/parsers/urdf.h>
-#include <SpatialDyn/utils/eigen_string.h>
+#include <ctrl_utils/eigen_string.h>
+#include <ctrl_utils/redis_client.h>
+#include <ctrl_utils/timer.h>
+#include <spatial_dyn/parsers/json.h>
+#include <spatial_dyn/parsers/urdf.h>
 #include <yaml-cpp/yaml.h>
 
 #include "articulated_body.h"
@@ -74,12 +76,12 @@ int main(int argc, char* argv[]) {
   const bool kSim = (argc > 2 && std::string(argv[2]) == "--sim");
 
   // Create Redis client and timer
-  SpatialDyn::RedisClient redis_client;
+  utils::RedisClient redis_client;
   redis_client.connect();
-  SpatialDyn::Timer timer(1000);
+  utils::Timer timer(1000);
 
   // Load robot
-  FrankaPanda::ArticulatedBody ab = SpatialDyn::Urdf::LoadModel(argv[1]);
+  franka_panda::ArticulatedBody ab = spatial_dyn::urdf::LoadModel(argv[1]);
   Eigen::VectorXd q_home(ab.dof());
   q_home << 0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.;
   if (kSim) {
@@ -94,7 +96,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Send model to visualizer
-  redis_client.sync_set(KEY_MODEL, SpatialDyn::Json::Serialize(ab).dump());
+  redis_client.sync_set(KEY_MODEL, spatial_dyn::json::Serialize(ab).dump());
   std::string path_urdf;
   {
     char* c_path_cwd = get_current_dir_name();
@@ -118,8 +120,8 @@ int main(int argc, char* argv[]) {
 
   const Eigen::Vector3d ee_offset = Eigen::Vector3d(0., 0., 0.107);
   Eigen::VectorXd q_des           = ab.q();
-  Eigen::Vector3d x_0             = SpatialDyn::Position(ab, -1, ee_offset);
-  Eigen::Quaterniond quat_des     = SpatialDyn::Orientation(ab);
+  Eigen::Vector3d x_0             = spatial_dyn::Position(ab, -1, ee_offset);
+  Eigen::Quaterniond quat_des     = spatial_dyn::Orientation(ab);
 
   // ab.set_inertia_compensation(Eigen::Vector3d(0.2, 0.1, 0.1));
   // ab.set_stiction_coefficients(Eigen::Vector3d(0.8, 0.8, 0.6));
@@ -141,7 +143,7 @@ int main(int argc, char* argv[]) {
     std::vector<double> arr_I_com = yaml_ee["I_com"].as<std::vector<double>>();
     Eigen::Map<Eigen::Vector3d> com(arr_com.data());
     Eigen::Map<Eigen::Vector6d> I_com(arr_I_com.data());
-    ab.ReplaceLoad(SpatialDyn::SpatialInertiad(m, com, I_com));
+    ab.ReplaceLoad(spatial_dyn::SpatialInertiad(m, com, I_com));
   } catch (...) {}
 
   // Create signal handler
@@ -190,42 +192,42 @@ int main(int argc, char* argv[]) {
       Eigen::Vector3d x_des = x_0;
       x_des(0) += 0.2 * (std::cos(timer.time_sim()) - 1.);
       x_des(1) += 0.2 * std::sin(timer.time_sim());
-      Eigen::Vector3d x = SpatialDyn::Position(ab, -1, ee_offset);
+      Eigen::Vector3d x = spatial_dyn::Position(ab, -1, ee_offset);
       Eigen::Vector3d x_err = x - x_des;
-      Eigen::Vector3d dx_err = SpatialDyn::LinearJacobian(ab, -1, ee_offset) * ab.dq();
+      Eigen::Vector3d dx_err = spatial_dyn::LinearJacobian(ab, -1, ee_offset) * ab.dq();
       Eigen::Vector3d ddx = -kp_pos * x_err - kv_pos * dx_err;
 
       // Orientation
-      Eigen::Quaterniond quat = SpatialDyn::Orientation(ab);
-      Eigen::Vector3d ori_err = SpatialDyn::Opspace::OrientationError(quat, quat_des);
-      Eigen::Vector3d w_err = SpatialDyn::AngularJacobian(ab) * ab.dq();
+      Eigen::Quaterniond quat = spatial_dyn::Orientation(ab);
+      Eigen::Vector3d ori_err = spatial_dyn::opspace::OrientationError(quat, quat_des);
+      Eigen::Vector3d w_err = spatial_dyn::AngularJacobian(ab) * ab.dq();
       Eigen::Vector3d dw = -kp_ori * ori_err - kv_ori * w_err;
 
       // Combine position/orientation
       Eigen::Vector6d ddx_dw;
       ddx_dw << ddx, dw;
-      const Eigen::Matrix6Xd& J = SpatialDyn::Jacobian(ab, -1, ee_offset);
+      const Eigen::Matrix6Xd& J = spatial_dyn::Jacobian(ab, -1, ee_offset);
       Eigen::MatrixXd N;
-      Eigen::VectorXd tau_cmd = SpatialDyn::Opspace::InverseDynamics(ab, J, ddx_dw, &N);
+      Eigen::VectorXd tau_cmd = spatial_dyn::opspace::InverseDynamics(ab, J, ddx_dw, &N);
 
       // Nullspace
       static const Eigen::MatrixXd I = Eigen::MatrixXd::Identity(ab.dof(), ab.dof());
       Eigen::VectorXd q_err = ab.q() - q_des;
       Eigen::VectorXd dq_err = ab.dq();
       Eigen::VectorXd ddq = -kp_joint * q_err - kv_joint * dq_err;
-      tau_cmd += SpatialDyn::Opspace::InverseDynamics(ab, I, ddq, &N);
+      tau_cmd += spatial_dyn::opspace::InverseDynamics(ab, I, ddq, &N);
 
       // Add friction compensation
-      tau_cmd += FrankaPanda::Friction(ab, tau_cmd);
+      tau_cmd += franka_panda::Friction(ab, tau_cmd);
 
       // Add gravity compensation
-      tau_cmd += SpatialDyn::Gravity(ab);
+      tau_cmd += spatial_dyn::Gravity(ab);
 
       if (kSim) {
         // Integrate
-        SpatialDyn::IntegrationOptions options;
+        spatial_dyn::IntegrationOptions options;
         options.friction = true;
-        SpatialDyn::Integrate(ab, tau_cmd, 0.001, {}, options);
+        spatial_dyn::Integrate(ab, tau_cmd, 0.001, {}, options);
 
         redis_client.set(KEY_CONTROL_TAU, tau_cmd);
         redis_client.set(KEY_SENSOR_Q, ab.q());

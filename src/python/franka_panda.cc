@@ -13,9 +13,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
 
-#include "FrankaPanda/model.h"
+#include "franka_panda/model.h"
 
-namespace FrankaPanda {
+namespace franka_panda {
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -51,4 +51,4 @@ PYBIND11_MODULE(frankapanda, m) {
 
 }
 
-}  // namespace SpatialDyn
+}  // namespace franka_panda

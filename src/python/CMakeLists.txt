@@ -24,4 +24,4 @@ pybind11_add_module(frankapanda franka_panda.cc)
 target_link_libraries(frankapanda
     PUBLIC
         pybind11::pybind11
-        FrankaPanda::FrankaPanda)
+        franka_panda::franka_panda)

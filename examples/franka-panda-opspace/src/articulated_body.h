@@ -11,26 +11,26 @@
 #ifndef SPATIAL_DYN_FRANKA_PANDA_H_
 #define SPATIAL_DYN_FRANKA_PANDA_H_
 
-#include <SpatialDyn/SpatialDyn.h>
-#include <FrankaPanda/FrankaPanda.h>
-#include <SpatialDyn/structs/articulated_body_cache.h>
+#include <spatial_dyn/spatial_dyn.h>
+#include <franka_panda/franka_panda.h>
+#include <spatial_dyn/structs/articulated_body_cache.h>
 
-namespace FrankaPanda {
+namespace franka_panda {
 
-class ArticulatedBody : public SpatialDyn::ArticulatedBody {
+class ArticulatedBody : public spatial_dyn::ArticulatedBody {
 
  public:
 
-  ArticulatedBody() : SpatialDyn::ArticulatedBody() {}
+  ArticulatedBody() : spatial_dyn::ArticulatedBody() {}
 
-  ArticulatedBody(const std::string& name) : SpatialDyn::ArticulatedBody(name) {}
+  ArticulatedBody(const std::string& name) : spatial_dyn::ArticulatedBody(name) {}
 
-  ArticulatedBody(const SpatialDyn::ArticulatedBody& ab) : SpatialDyn::ArticulatedBody(ab) {}
+  ArticulatedBody(const spatial_dyn::ArticulatedBody& ab) : spatial_dyn::ArticulatedBody(ab) {}
 
   virtual ~ArticulatedBody() {}
 
   virtual void set_q(Eigen::Ref<const Eigen::VectorXd> q) override {
-    SpatialDyn::ArticulatedBody::set_q(q);
+    spatial_dyn::ArticulatedBody::set_q(q);
     franka_panda_.set_q(q);
     ComputeInertia();
     ComputeCentrifugalCoriolis();
@@ -38,7 +38,7 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
   }
 
   virtual void set_dq(Eigen::Ref<const Eigen::VectorXd> dq) override {
-    SpatialDyn::ArticulatedBody::set_dq(dq);
+    spatial_dyn::ArticulatedBody::set_dq(dq);
     franka_panda_.set_dq(dq);
     ComputeCentrifugalCoriolis();
   }
@@ -61,20 +61,20 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
     franka_panda_.set_stiction_activations(coeffs);
   }
 
-  const FrankaPanda::Model& franka_panda() const { return franka_panda_; }
+  const franka_panda::Model& franka_panda() const { return franka_panda_; }
 
-  virtual void AddLoad(const SpatialDyn::SpatialInertiad& inertia, int idx_link = -1) override {
+  virtual void AddLoad(const spatial_dyn::SpatialInertiad& inertia, int idx_link = -1) override {
     if (idx_link < 0) idx_link += dof();
-    SpatialDyn::ArticulatedBody::AddLoad(inertia, idx_link);
+    spatial_dyn::ArticulatedBody::AddLoad(inertia, idx_link);
     set_inertia_load(inertia_load_.at(idx_link));
     ComputeInertia();
     ComputeCentrifugalCoriolis();
     ComputeGravity();
   }
 
-  virtual void ReplaceLoad(const SpatialDyn::SpatialInertiad& inertia, int idx_link = -1) override {
+  virtual void ReplaceLoad(const spatial_dyn::SpatialInertiad& inertia, int idx_link = -1) override {
     if (idx_link < 0) idx_link += dof();
-    SpatialDyn::ArticulatedBody::ReplaceLoad(inertia, idx_link);
+    spatial_dyn::ArticulatedBody::ReplaceLoad(inertia, idx_link);
     set_inertia_load(inertia_load_.at(idx_link));
     ComputeInertia();
     ComputeCentrifugalCoriolis();
@@ -83,7 +83,7 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
 
   virtual void ClearLoad(int idx_link = -1) override {
     if (idx_link < 0) idx_link += dof();
-    SpatialDyn::ArticulatedBody::ClearLoad(idx_link);
+    spatial_dyn::ArticulatedBody::ClearLoad(idx_link);
     set_inertia_load(inertia_load_.at(idx_link));
     ComputeInertia();
     ComputeCentrifugalCoriolis();
@@ -92,7 +92,7 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
 
  protected:
 
-  void set_inertia_load(const SpatialDyn::SpatialInertiad& I) {
+  void set_inertia_load(const spatial_dyn::SpatialInertiad& I) {
     franka_panda_.set_m_load(I.mass);
     franka_panda_.set_com_load(I.com);
     franka_panda_.set_I_com_load(I.I_com_flat());
@@ -117,14 +117,14 @@ class ArticulatedBody : public SpatialDyn::ArticulatedBody {
     grav.is_computed = true;
   }
 
-  mutable FrankaPanda::Model franka_panda_;
+  mutable franka_panda::Model franka_panda_;
 
 };
 
-Eigen::VectorXd Friction(const FrankaPanda::ArticulatedBody& ab, Eigen::Ref<const Eigen::VectorXd> tau) {
+Eigen::VectorXd Friction(const franka_panda::ArticulatedBody& ab, Eigen::Ref<const Eigen::VectorXd> tau) {
   return Friction(ab.franka_panda(), tau);
 }
 
-}  // namespace FrankaPanda
+}  // namespace franka_panda
 
 #endif  // SPATIAL_DYN_FRANKA_PANDA_H_
