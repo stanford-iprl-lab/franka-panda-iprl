@@ -22,7 +22,7 @@
 namespace franka_driver {
 
 template<unsigned long Dim>
-std::string ArrayToString(const std::array<double, Dim>& arr, bool use_json) {
+std::string ArrayToString(const std::array<double, Dim>& arr, bool use_json = false) {
   Eigen::Map<const Eigen::VectorXd> map(arr.data(), arr.size());
   if (use_json) {
     ctrl_utils::Eigen::EncodeJson(map);
@@ -31,7 +31,7 @@ std::string ArrayToString(const std::array<double, Dim>& arr, bool use_json) {
 }
 
 template<unsigned long Dim>
-std::array<double, Dim> StringToArray(const std::string str, bool use_json) {
+std::array<double, Dim> StringToArray(const std::string str, bool use_json = false) {
   std::array<double, Dim> arr;
   Eigen::Map<Eigen::VectorXd> map(arr.data(), arr.size());
   Eigen::MatrixXd M;
@@ -44,30 +44,6 @@ std::array<double, Dim> StringToArray(const std::string str, bool use_json) {
   map = m;
   return arr;
 }
-
-template<unsigned long Dim>
-std::stringstream& operator<<(std::stringstream& ss, const std::array<double, Dim>& arr) {
-  ss << ArrayToString(arr);
-  return ss;
-}
-
-template<unsigned long Dim>
-std::stringstream& operator>>(std::stringstream& ss, std::array<double, Dim>& arr) {
-  arr = StringToArray<Dim>(ss.str());
-  return ss;
-}
-
-template<int Rows, int Cols, unsigned long Dim>
-std::string MatrixToString(const std::array<double, Dim>& arr, bool use_json) {
-  static_assert(Rows * Cols == Dim, "Rows * Cols must equal Dim");
-
-  Eigen::Map<const Eigen::MatrixXd> map(arr.data(), Rows, Cols);
-  if (use_json) {
-    ctrl_utils::Eigen::EncodeJson(map);
-  }
-  return ctrl_utils::Eigen::EncodeMatlab(map);
-}
-
 
 std::array<double, 16> StringToTransform(const std::string str, bool use_json) {
   std::array<double, 16> arr;

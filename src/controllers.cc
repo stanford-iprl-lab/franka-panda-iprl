@@ -18,7 +18,7 @@
 
 namespace franka_driver {
 
-static const std::map<std::string, ControlMode> kControlModeToString = {
+static const std::map<std::string, ControlMode> kStringToControlMode = {
   {"floating", ControlMode::FLOATING},
   {"torque", ControlMode::TORQUE},
   {"joint_position", ControlMode::JOINT_POSITION},
@@ -26,15 +26,22 @@ static const std::map<std::string, ControlMode> kControlModeToString = {
   {"cartesian_pose", ControlMode::CARTESIAN_POSE},
   {"cartesian_velocity", ControlMode::CARTESIAN_VELOCITY}
 };
-ControlMode StringToControlMode(const std::string& mode) {
-  if (kControlModeToString.find(mode) == kControlModeToString.end()) {
-    std::cerr << "StringToControlMode(): Unable to parse ControlMode from " << mode
+std::stringstream& operator>>(std::stringstream& ss, ControlMode& mode) {
+  if (kStringToControlMode.find(ss.str()) == kStringToControlMode.end()) {
+    std::cerr << "StringToControlMode(): Unable to parse ControlMode from " << ss.str()
               << ". Must be one of: {\"floating\", \"torque\", \"joint_position\","
               << "\"joint_velocity\", \"cartesian_position\", \"cartesian_velocity\"}. "
               << "Defaulting to \"floating\"." << std::endl;
-    return ControlMode::FLOATING;
+    mode = ControlMode::FLOATING;
+  } else {
+    mode = kStringToControlMode.at(ss.str());
   }
-  return kControlModeToString.at(mode);
+  return ss;
+}
+
+std::stringstream& operator<<(std::stringstream& ss, ControlMode mode) {
+  ss << ControlModeToString(mode);
+  return ss;
 }
 
 std::string ControlModeToString(ControlMode mode) {

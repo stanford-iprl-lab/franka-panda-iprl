@@ -10,7 +10,8 @@
 
 #include "args.h"
 
-#include <iostream>  // std::cout
+#include <exception>  // std::runtime_error
+#include <iostream>   // std::cout
 
 #include <Eigen/Eigen>
 #include <yaml-cpp/yaml.h>
@@ -68,66 +69,82 @@ Args ParseYaml(const char* filename) {
   std::cout << "Loading config: " << filename << std::endl << std::endl
             << yaml << std::endl << std::endl;
 
-  args.ip_robot   = yaml["robot"]["ip"].as<std::string>();
+  try {
+    args.ip_robot   = yaml["robot"]["ip"].as<std::string>();
 
-  // Redis parameters
-  args.ip_redis   = yaml["redis"]["ip"].as<std::string>();
-  args.port_redis = yaml["redis"]["port"].as<size_t>();
+    // Redis parameters
+    args.ip_redis   = yaml["redis"]["ip"].as<std::string>();
+    args.port_redis = yaml["redis"]["port"].as<size_t>();
 
-  args.key_prefix        = yaml["redis"]["keys"]["prefix"].as<std::string>();
-  args.key_tau_command   = yaml["redis"]["keys"]["tau_command"].as<std::string>();
-  args.key_pose_command  = yaml["redis"]["keys"]["pose_command"].as<std::string>();
-  args.key_dx_command    = yaml["redis"]["keys"]["dx_command"].as<std::string>();
-  args.key_q_command     = yaml["redis"]["keys"]["q_command"].as<std::string>();
-  args.key_dq_command    = yaml["redis"]["keys"]["dq_command"].as<std::string>();
-  args.key_control_mode  = yaml["redis"]["keys"]["control_mode"].as<std::string>();
-  args.key_inertia_load  = yaml["redis"]["keys"]["inertia_load"].as<std::string>();
-  args.key_q             = yaml["redis"]["keys"]["q"].as<std::string>();
-  args.key_dq            = yaml["redis"]["keys"]["dq"].as<std::string>();
-  args.key_tau           = yaml["redis"]["keys"]["tau"].as<std::string>();
-  args.key_dtau          = yaml["redis"]["keys"]["dtau"].as<std::string>();
-  args.key_inertia_ee    = yaml["redis"]["keys"]["inertia_ee"].as<std::string>();
-  args.key_driver_status = yaml["redis"]["keys"]["driver_status"].as<std::string>();
+    args.key_prefix            = yaml["redis"]["keys"]["prefix"].as<std::string>();
+    args.key_tau_des           = yaml["redis"]["keys"]["tau_des"].as<std::string>();
+    args.key_pose_des          = yaml["redis"]["keys"]["pose_des"].as<std::string>();
+    args.key_dx_des            = yaml["redis"]["keys"]["dx_des"].as<std::string>();
+    args.key_q_des             = yaml["redis"]["keys"]["q_des"].as<std::string>();
+    args.key_dq_des            = yaml["redis"]["keys"]["dq_des"].as<std::string>();
+    args.key_control_mode      = yaml["redis"]["keys"]["control_mode"].as<std::string>();
 
-  args.use_json          = yaml["redis"]["use_json"].as<bool>();
+    args.key_gripper_mode      = yaml["redis"]["keys"]["gripper_mode"].as<std::string>();
+    args.key_gripper_width_des = yaml["redis"]["keys"]["gripper_width_des"].as<std::string>();
+    args.key_gripper_speed_des = yaml["redis"]["keys"]["gripper_speed_des"].as<std::string>();
+    args.key_gripper_force_des = yaml["redis"]["keys"]["gripper_force_des"].as<std::string>();
+    args.key_gripper_grasp_tol = yaml["redis"]["keys"]["gripper_grasp_tol"].as<std::string>();
 
-  // Load parameters
-  args.load_mass = yaml["load"]["mass"].as<double>();
-  args.load_com = yaml["load"]["com"].as<std::array<double, 3>>();
+    args.key_inertia_load      = yaml["redis"]["keys"]["inertia_load"].as<std::string>();
 
-  args.load_inertia[0] = yaml["load"]["inertia"]["xx"].as<double>();
-  args.load_inertia[1] = yaml["load"]["inertia"]["xy"].as<double>();
-  args.load_inertia[2] = yaml["load"]["inertia"]["xz"].as<double>();
+    args.key_q                 = yaml["redis"]["keys"]["q"].as<std::string>();
+    args.key_dq                = yaml["redis"]["keys"]["dq"].as<std::string>();
+    args.key_tau               = yaml["redis"]["keys"]["tau"].as<std::string>();
+    args.key_dtau              = yaml["redis"]["keys"]["dtau"].as<std::string>();
+    args.key_inertia_ee        = yaml["redis"]["keys"]["inertia_ee"].as<std::string>();
+    args.key_driver_status     = yaml["redis"]["keys"]["driver_status"].as<std::string>();
 
-  args.load_inertia[3] = yaml["load"]["inertia"]["xy"].as<double>();
-  args.load_inertia[4] = yaml["load"]["inertia"]["yy"].as<double>();
-  args.load_inertia[5] = yaml["load"]["inertia"]["yz"].as<double>();
+    args.key_gripper_width     = yaml["redis"]["keys"]["gripper_width"].as<std::string>();
+    args.key_gripper_max_width = yaml["redis"]["keys"]["gripper_max_width"].as<std::string>();
+    args.key_gripper_status    = yaml["redis"]["keys"]["gripper_status"].as<std::string>();
 
-  args.load_inertia[6] = yaml["load"]["inertia"]["xz"].as<double>();
-  args.load_inertia[7] = yaml["load"]["inertia"]["yz"].as<double>();
-  args.load_inertia[8] = yaml["load"]["inertia"]["zz"].as<double>();
+    args.use_json              = yaml["redis"]["use_json"].as<bool>();
 
-  // Control parameters
-  args.limit_rate = yaml["control"]["limit_rate"].as<bool>();
-  args.lowpass_freq_cutoff = yaml["control"]["lowpass_freq_cutoff"].as<double>();
+    // Load parameters
+    args.load_mass = yaml["load"]["mass"].as<double>();
+    args.load_com  = yaml["load"]["com"].as<std::array<double, 3>>();
 
-  args.compensate_gravity = yaml["control"]["torque_controller"]["compensate_gravity"].as<bool>();
+    args.load_inertia[0] = yaml["load"]["inertia"]["xx"].as<double>();
+    args.load_inertia[1] = yaml["load"]["inertia"]["xy"].as<double>();
+    args.load_inertia[2] = yaml["load"]["inertia"]["xz"].as<double>();
 
-  args.K_joint = yaml["control"]["joint_space_controller"]["K_joint"].as<std::array<double, 7>>();
+    args.load_inertia[3] = yaml["load"]["inertia"]["xy"].as<double>();
+    args.load_inertia[4] = yaml["load"]["inertia"]["yy"].as<double>();
+    args.load_inertia[5] = yaml["load"]["inertia"]["yz"].as<double>();
 
-  args.K_cart = yaml["control"]["cartesian_space_controller"]["K_cart"].as<std::array<double, 6>>();
-  args.T_ee_to_flange = ParseTransform(yaml["control"]["cartesian_space_controller"]["T_ee_to_flange"]);
-  args.T_op_point_to_ee = ParseTransform(yaml["control"]["cartesian_space_controller"]["T_op_point_to_ee"]);
+    args.load_inertia[6] = yaml["load"]["inertia"]["xz"].as<double>();
+    args.load_inertia[7] = yaml["load"]["inertia"]["yz"].as<double>();
+    args.load_inertia[8] = yaml["load"]["inertia"]["zz"].as<double>();
 
-  args.tau_contact_thresholds_acc   = ParseArray<7>(yaml["control"]["collision_thresholds"]["tau_contact_acc"]);
-  args.tau_collision_thresholds_acc = ParseArray<7>(yaml["control"]["collision_thresholds"]["tau_collision_acc"]);
-  args.tau_contact_thresholds       = ParseArray<7>(yaml["control"]["collision_thresholds"]["tau_contact"]);
-  args.tau_collision_thresholds     = ParseArray<7>(yaml["control"]["collision_thresholds"]["tau_collision"]);
-  args.f_contact_thresholds_acc     = ParseArray<6>(yaml["control"]["collision_thresholds"]["f_contact_acc"]);
-  args.f_collision_thresholds_acc   = ParseArray<6>(yaml["control"]["collision_thresholds"]["f_collision_acc"]);
-  args.f_contact_thresholds         = ParseArray<6>(yaml["control"]["collision_thresholds"]["f_contact"]);
-  args.f_collision_thresholds       = ParseArray<6>(yaml["control"]["collision_thresholds"]["f_collision"]);
+    // Control parameters
+    args.limit_rate          = yaml["control"]["limit_rate"].as<bool>();
+    args.lowpass_freq_cutoff = yaml["control"]["lowpass_freq_cutoff"].as<double>();
 
+    args.compensate_gravity  = yaml["control"]["torque_controller"]["compensate_gravity"].as<bool>();
+
+    args.K_joint             = yaml["control"]["joint_space_controller"]["K_joint"].as<std::array<double, 7>>();
+
+    args.K_cart              = yaml["control"]["cartesian_space_controller"]["K_cart"].as<std::array<double, 6>>();
+    args.T_ee_to_flange      = ParseTransform(yaml["control"]["cartesian_space_controller"]["T_ee_to_flange"]);
+    args.T_op_point_to_ee    = ParseTransform(yaml["control"]["cartesian_space_controller"]["T_op_point_to_ee"]);
+
+    args.tau_contact_thresholds_acc   = ParseArray<7>(yaml["control"]["collision_thresholds"]["tau_contact_acc"]);
+    args.tau_collision_thresholds_acc = ParseArray<7>(yaml["control"]["collision_thresholds"]["tau_collision_acc"]);
+    args.tau_contact_thresholds       = ParseArray<7>(yaml["control"]["collision_thresholds"]["tau_contact"]);
+    args.tau_collision_thresholds     = ParseArray<7>(yaml["control"]["collision_thresholds"]["tau_collision"]);
+    args.f_contact_thresholds_acc     = ParseArray<6>(yaml["control"]["collision_thresholds"]["f_contact_acc"]);
+    args.f_collision_thresholds_acc   = ParseArray<6>(yaml["control"]["collision_thresholds"]["f_collision_acc"]);
+    args.f_contact_thresholds         = ParseArray<6>(yaml["control"]["collision_thresholds"]["f_contact"]);
+    args.f_collision_thresholds       = ParseArray<6>(yaml["control"]["collision_thresholds"]["f_collision"]);
+
+  } catch (...) {
+    throw std::runtime_error("franka_panda::ParseYaml(): Unable to parse YAML config.");
+  }
   return args;
 }
 
@@ -190,12 +207,17 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  ip_redis: " << args.ip_redis << std::endl
      << "  port_redis: " << args.port_redis << std::endl
      << "  key_prefix: " << args.key_prefix << std::endl
-     << "  key_tau_command: " << args.key_tau_command << std::endl
-     << "  key_pose_command: " << args.key_pose_command << std::endl
-     << "  key_dx_command: " << args.key_dx_command << std::endl
-     << "  key_q_command: " << args.key_q_command << std::endl
-     << "  key_dq_command: " << args.key_dq_command << std::endl
+     << "  key_tau_des: " << args.key_tau_des << std::endl
+     << "  key_pose_des: " << args.key_pose_des << std::endl
+     << "  key_dx_des: " << args.key_dx_des << std::endl
+     << "  key_q_des: " << args.key_q_des << std::endl
+     << "  key_dq_des: " << args.key_dq_des << std::endl
      << "  key_control_mode: " << args.key_control_mode << std::endl
+     << "  key_gripper_mode: " << args.key_gripper_mode << std::endl
+     << "  key_gripper_width_des: " << args.key_gripper_width_des << std::endl
+     << "  key_gripper_speed_des: " << args.key_gripper_speed_des << std::endl
+     << "  key_gripper_force_des: " << args.key_gripper_force_des << std::endl
+     << "  key_gripper_grasp_tol: " << args.key_gripper_grasp_tol << std::endl
      << "  key_inertia_load: " << args.key_inertia_load << std::endl
      << "  key_q: " << args.key_q << std::endl
      << "  key_dq: " << args.key_dq << std::endl
@@ -203,6 +225,9 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  key_dtau: " << args.key_dtau << std::endl
      << "  key_inertia_ee: " << args.key_inertia_ee << std::endl
      << "  key_driver_status: " << args.key_driver_status << std::endl
+     << "  key_gripper_width: " << args.key_gripper_width << std::endl
+     << "  key_gripper_max_width: " << args.key_gripper_max_width << std::endl
+     << "  key_gripper_status: " << args.key_gripper_status << std::endl
      << "  use_json: " << args.use_json << std::endl
      << "  load_mass: " << args.load_mass << std::endl
      << "  load_com: " << args.load_com << std::endl

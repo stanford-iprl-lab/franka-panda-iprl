@@ -14,6 +14,7 @@
 #include <exception>   // std::runtime_error
 #include <functional>  // std::function
 #include <memory>      // std::shared_ptr
+#include <sstream>     // std::stringstream
 #include <string>      // std::string
 
 #include <franka/model.h>
@@ -29,7 +30,9 @@ enum class ControlMode {
   FLOATING, TORQUE, JOINT_POSITION, JOINT_VELOCITY, CARTESIAN_POSE, CARTESIAN_VELOCITY
 };
 
-ControlMode StringToControlMode(const std::string& mode);
+std::stringstream& operator<<(std::stringstream& ss, ControlMode mode);
+
+std::stringstream& operator>>(std::stringstream& ss, ControlMode& mode);
 
 std::string ControlModeToString(ControlMode mode);
 

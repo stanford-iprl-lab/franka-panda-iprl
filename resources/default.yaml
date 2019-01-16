@@ -30,21 +30,29 @@ redis:
     prefix: "franka_panda::"
 
     # Keys read by driver
-    tau_command:  "control::tau"
-    pose_command: "control::pose"
-    dx_command:   "control::dx"
-    q_command:    "control::q"
-    dq_command:   "control::dq"
-    control_mode: "control::mode"
-    inertia_load: "control::inertia_load"
+    tau_des:           "control::tau"
+    pose_des:          "control::pose"
+    dx_des:            "control::dx"
+    q_des:             "control::q"
+    dq_des:            "control::dq"
+    control_mode:      "control::mode"
+    inertia_load:      "control::inertia_load"
+    gripper_mode:      "gripper::control::mode"
+    gripper_width_des: "gripper::control::width"
+    gripper_speed_des: "gripper::control::speed"
+    gripper_force_des: "gripper::control::force"
+    gripper_grasp_tol: "gripper::control::grasp_tol"
 
     # Keys written by driver
-    q:             "sensor::q"
-    dq:            "sensor::dq"
-    tau:           "sensor::tau"
-    dtau:          "sensor::dtau"
-    inertia_ee:    "model::inertia_ee"
-    driver_status: "driver::status"
+    q:                 "sensor::q"
+    dq:                "sensor::dq"
+    tau:               "sensor::tau"
+    dtau:              "sensor::dtau"
+    inertia_ee:        "model::inertia_ee"
+    driver_status:     "driver::status"
+    gripper_width:     "gripper::sensor::width"
+    gripper_grasped:   "gripper::sensor::grasped"
+    gripper_max_width: "gripper::model::max_width"
 
   # Use JSON or Matlab formatting for matrices in Redis
   use_json: false

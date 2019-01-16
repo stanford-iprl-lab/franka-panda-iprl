@@ -28,23 +28,34 @@ struct Args {
   std::string key_prefix = "franka_panda::";
 
   // Incoming GET keys
-  std::string key_tau_command  = "control::tau";
-  std::string key_pose_command = "control::pose";
-  std::string key_dx_command   = "control::dx";
-  std::string key_q_command    = "control::q";
-  std::string key_dq_command   = "control::dq";
-  std::string key_control_mode = "control::mode";
+  std::string key_tau_des           = "control::tau";
+  std::string key_pose_des          = "control::pose";
+  std::string key_dx_des            = "control::dx";
+  std::string key_q_des             = "control::q";
+  std::string key_dq_des            = "control::dq";
+  std::string key_control_mode      = "control::mode";
+
+  // Incoming MGET keys
+  std::string key_gripper_mode      = "gripper::control::mode";
+  std::string key_gripper_width_des = "gripper::control::width";
+  std::string key_gripper_speed_des = "gripper::control::speed";
+  std::string key_gripper_force_des = "gripper::control::force";
+  std::string key_gripper_grasp_tol = "gripper::control::grasp_tol";
 
   // Incoming SUB keys
-  std::string key_inertia_load = "control::inertia_load";
+  std::string key_inertia_load      = "control::inertia_load";
 
   // Outgoing SET keys
-  std::string key_q             = "sensor::q";
-  std::string key_dq            = "sensor::dq";
-  std::string key_tau           = "sensor::tau";
-  std::string key_dtau          = "sensor::dtau";
-  std::string key_inertia_ee    = "model::inertia_ee";
-  std::string key_driver_status = "driver::status";
+  std::string key_q                 = "sensor::q";
+  std::string key_dq                = "sensor::dq";
+  std::string key_tau               = "sensor::tau";
+  std::string key_dtau              = "sensor::dtau";
+  std::string key_inertia_ee        = "model::inertia_ee";
+  std::string key_driver_status     = "driver::status";
+
+  std::string key_gripper_width     = "gripper::sensor::width";
+  std::string key_gripper_max_width = "gripper::model::max_width";
+  std::string key_gripper_status    = "gripper::driver::status";
 
   bool use_json = false;
 
