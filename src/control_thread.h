@@ -1,5 +1,5 @@
 /**
- * controllers.h
+ * control_thread.h
  *
  * Copyright 2018. All Rights Reserved.
  * Stanford IPRL
@@ -8,8 +8,8 @@
  * Authors: Toki Migimatsu
  */
 
-#ifndef FRANKA_DRIVER_CONTROLLERS_H_
-#define FRANKA_DRIVER_CONTROLLERS_H_
+#ifndef FRANKA_DRIVER_CONTROL_THREAD_H_
+#define FRANKA_DRIVER_CONTROL_THREAD_H_
 
 #include <exception>   // std::runtime_error
 #include <functional>  // std::function
@@ -31,9 +31,7 @@ enum class ControlMode {
 };
 
 std::stringstream& operator<<(std::stringstream& ss, ControlMode mode);
-
 std::stringstream& operator>>(std::stringstream& ss, ControlMode& mode);
-
 std::string ControlModeToString(ControlMode mode);
 
 class SwitchControllerException : public std::runtime_error {
@@ -41,6 +39,9 @@ class SwitchControllerException : public std::runtime_error {
   SwitchControllerException(const std::string msg) : std::runtime_error(msg) {}
   ~SwitchControllerException() {}
 };
+
+void RunControlLoop(const Args& args, const std::shared_ptr<SharedMemory>& globals,
+                    franka::Robot& robot, const franka::Model& model);
 
 std::function<franka::Torques(const franka::RobotState&, franka::Duration)>
 CreateTorqueController(const Args& args, const std::shared_ptr<SharedMemory>& globals,
@@ -52,4 +53,4 @@ CreateCartesianPoseController(const Args& args, const std::shared_ptr<SharedMemo
 
 }  // namespace franka_driver
 
-#endif  // FRANKA_DRIVER_CONTROLLERS_H_
+#endif  // FRANKA_DRIVER_CONTROL_THREAD_H_

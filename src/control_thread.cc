@@ -1,0 +1,96 @@
+/**
+ * control_thread.cc
+ *
+ * Copyright 2018. All Rights Reserved.
+ * Stanford IPRL
+ *
+ * Created: December 20, 2018
+ * Authors: Toki Migimatsu
+ */
+
+#include "control_thread.h"
+
+#include <iostream>  // std::cerr
+#include <map>       // std::map
+
+#include "shared_memory.h"
+
+namespace franka_driver {
+
+void RunControlLoop(const Args& args, const std::shared_ptr<SharedMemory>& globals,
+                    franka::Robot& robot, const franka::Model& model) {
+  ControlMode control_mode = globals->control_mode;
+  while (*globals->runloop) {
+    try {
+      switch (control_mode) {
+        case ControlMode::FLOATING:
+        case ControlMode::TORQUE:
+          robot.control(CreateTorqueController(args, globals, model),
+                        args.limit_rate, args.lowpass_freq_cutoff);  // Blocking
+          break;
+        case ControlMode::CARTESIAN_POSE:
+          robot.control(CreateCartesianPoseController(args, globals, model),
+                        franka::ControllerMode::kCartesianImpedance,
+                        args.limit_rate, args.lowpass_freq_cutoff);  // Blocking
+          break;
+        default:
+          throw std::runtime_error("Controller mode " + ControlModeToString(control_mode) + " not supported.");
+      }
+    } catch (const SwitchControllerException& e) {
+      // Switch controllers
+      control_mode = globals->control_mode;
+      std::cout << "Switching controllers from \"" << e.what() << "\" to \""
+                << ControlModeToString(control_mode) << "\"" << std::endl;
+    }
+  }
+}
+
+void RedisSetSensorValues(const std::shared_ptr<SharedMemory>& globals,
+                          const franka::Model& model, const franka::RobotState& state) {
+  globals->q        = state.q;
+  globals->dq       = state.dq;
+  globals->tau      = state.tau_J;
+  globals->dtau     = state.dtau_J;
+  globals->m_ee     = state.m_ee;
+  globals->com_ee   = state.F_x_Cee;
+  globals->I_com_ee = state.I_ee;
+}
+
+std::stringstream& operator>>(std::stringstream& ss, ControlMode& mode) {
+  static const std::map<std::string, ControlMode> kStringToControlMode = {
+    {"floating", ControlMode::FLOATING},
+    {"torque", ControlMode::TORQUE},
+    {"joint_position", ControlMode::JOINT_POSITION},
+    {"joint_velocity", ControlMode::JOINT_VELOCITY},
+    {"cartesian_pose", ControlMode::CARTESIAN_POSE},
+    {"cartesian_velocity", ControlMode::CARTESIAN_VELOCITY}
+  };
+  if (kStringToControlMode.find(ss.str()) == kStringToControlMode.end()) {
+    std::cerr << "StringToControlMode(): Unable to parse ControlMode from " << ss.str()
+              << ". Must be one of: {\"floating\", \"torque\", \"joint_position\","
+              << "\"joint_velocity\", \"cartesian_position\", \"cartesian_velocity\"}. "
+              << "Defaulting to \"floating\"." << std::endl;
+    mode = ControlMode::FLOATING;
+  } else {
+    mode = kStringToControlMode.at(ss.str());
+  }
+  return ss;
+}
+
+std::stringstream& operator<<(std::stringstream& ss, ControlMode mode) {
+  ss << ControlModeToString(mode);
+  return ss;
+}
+
+std::string ControlModeToString(ControlMode mode) {
+  switch (mode) {
+    case ControlMode::TORQUE: return "torque";
+    case ControlMode::JOINT_POSITION: return "joint_position";
+    case ControlMode::JOINT_VELOCITY: return "joint_velocity";
+    case ControlMode::CARTESIAN_POSE: return "cartesian_pose";
+    case ControlMode::CARTESIAN_VELOCITY: return "cartesian_velocity";
+    default: return "floating";
+  }
+}
+
+}  // namespace FrankaDriver

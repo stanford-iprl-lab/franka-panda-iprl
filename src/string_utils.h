@@ -17,8 +17,6 @@
 
 #include <ctrl_utils/eigen_string.h>
 
-#include "controllers.h"
-
 namespace franka_driver {
 
 template<unsigned long Dim>

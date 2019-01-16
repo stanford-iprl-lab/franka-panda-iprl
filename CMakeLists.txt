@@ -86,7 +86,11 @@ target_sources(${FRANKA_PANDA_BIN}
     PRIVATE
         ${FRANKA_PANDA_SRC_DIR}/main.cc
         ${FRANKA_PANDA_SRC_DIR}/args.cc
-        ${FRANKA_PANDA_SRC_DIR}/controllers.cc
+        ${FRANKA_PANDA_SRC_DIR}/cartesian_pose_control.cc
+        ${FRANKA_PANDA_SRC_DIR}/control_thread.cc
+        ${FRANKA_PANDA_SRC_DIR}/gripper_thread.cc
+        ${FRANKA_PANDA_SRC_DIR}/redis_thread.cc
+        ${FRANKA_PANDA_SRC_DIR}/torque_control.cc
 )
 
 # Create franka_panda library

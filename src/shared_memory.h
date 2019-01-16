@@ -15,11 +15,9 @@
 #include <array>     // std::array
 #include <signal.h>  // sig_atomic_t
 
-#include "controllers.h"
+#include "control_thread.h"
 
 namespace franka_driver {
-
-enum class ControlMode;
 
 struct SharedMemory {
   std::atomic<std::array<double, 7>> tau_command   = {{{0.}}};
