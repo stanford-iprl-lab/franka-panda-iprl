@@ -166,7 +166,7 @@ The apps are provided in both C++ and Python:
    make
    ```
 
-2. Run the app:
+2. Run the app (only use the `--sim` flag for simulation when the driver is not running):
 
    ```
    cd <franka-panda.git>/examples/opspace/bin
@@ -192,7 +192,7 @@ The apps are provided in both C++ and Python:
    pip install -e .
    ```
 
-3. Run the app:
+3. Run the app (only use the `--sim` flag for simulation when the driver is not running):
 
    ```
    cd <franka-panda.git>/examples/opspace/python
