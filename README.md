@@ -22,6 +22,7 @@ This driver has been tested on Ubuntu 16.04 with C++14.
 3. Build the driver
 
    ```
+   cd <franka-panda.git>
    mkdir build
    cd build
    cmake ..
@@ -32,7 +33,7 @@ Usage
 -----
 
 1. Open the robot interface by connecting to the ip address of the controller in
-   your web browser (e.g. ```172.16.0.10```).
+   your web browser (e.g. ```172.16.0.2```).
 
 2. Open the User stop and the robot brakes through the web interface.
 
@@ -134,15 +135,7 @@ The apps are provided in both C++ and Python:
    pip install -e .
    ```
 
-3. Locally install the `ctrlutils` module (look in
-   `~/.cmake/packages/ctrl_utils` for a hint of where it's located):
-
-   ```
-   cd <ctrl-utils.git>
-   pip install -e .
-   ```
-
-4. Run the app:
+3. Run the app:
 
    ```
    cd <franka-panda.git>/examples/opspace/python
