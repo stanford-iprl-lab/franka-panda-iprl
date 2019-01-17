@@ -176,7 +176,13 @@ The apps are provided in both C++ and Python:
 ### Python
 
 1. Activate the Python virtual environment above where you installed the
-   `frankapanda` module.
+   `frankapanda` module. An example Pipfile is provided in this repo.
+
+   ```
+   cd <franka-panda.git>
+   pipenv install --three
+   pipenv shell
+   ```
 
 2. Locally install the `spatialdyn` module (look in
    `~/.cmake/packages/spatial_dyn` for a hint of where it's located):
