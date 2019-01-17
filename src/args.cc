@@ -84,11 +84,11 @@ Args ParseYaml(const char* filename) {
     args.key_dq_des            = yaml["redis"]["keys"]["dq_des"].as<std::string>();
     args.key_control_mode      = yaml["redis"]["keys"]["control_mode"].as<std::string>();
 
-    args.key_gripper_mode      = yaml["redis"]["keys"]["gripper_mode"].as<std::string>();
     args.key_gripper_width_des = yaml["redis"]["keys"]["gripper_width_des"].as<std::string>();
     args.key_gripper_speed_des = yaml["redis"]["keys"]["gripper_speed_des"].as<std::string>();
     args.key_gripper_force_des = yaml["redis"]["keys"]["gripper_force_des"].as<std::string>();
     args.key_gripper_grasp_tol = yaml["redis"]["keys"]["gripper_grasp_tol"].as<std::string>();
+    args.key_gripper_mode      = yaml["redis"]["keys"]["gripper_mode"].as<std::string>();
 
     args.key_inertia_load      = yaml["redis"]["keys"]["inertia_load"].as<std::string>();
 
@@ -214,11 +214,11 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  key_q_des: " << args.key_q_des << std::endl
      << "  key_dq_des: " << args.key_dq_des << std::endl
      << "  key_control_mode: " << args.key_control_mode << std::endl
-     << "  key_gripper_mode: " << args.key_gripper_mode << std::endl
      << "  key_gripper_width_des: " << args.key_gripper_width_des << std::endl
      << "  key_gripper_speed_des: " << args.key_gripper_speed_des << std::endl
      << "  key_gripper_force_des: " << args.key_gripper_force_des << std::endl
      << "  key_gripper_grasp_tol: " << args.key_gripper_grasp_tol << std::endl
+     << "  key_gripper_mode: " << args.key_gripper_mode << std::endl
      << "  key_inertia_load: " << args.key_inertia_load << std::endl
      << "  key_q: " << args.key_q << std::endl
      << "  key_dq: " << args.key_dq << std::endl

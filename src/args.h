@@ -36,11 +36,11 @@ struct Args {
   std::string key_control_mode      = "control::mode";
 
   // Incoming MGET keys
-  std::string key_gripper_mode      = "gripper::control::mode";
   std::string key_gripper_width_des = "gripper::control::width";
   std::string key_gripper_speed_des = "gripper::control::speed";
   std::string key_gripper_force_des = "gripper::control::force";
   std::string key_gripper_grasp_tol = "gripper::control::grasp_tol";
+  std::string key_gripper_mode      = "gripper::control::mode";
 
   // Incoming SUB keys
   std::string key_inertia_load      = "control::inertia_load";
@@ -56,7 +56,7 @@ struct Args {
 
   std::string key_gripper_width     = "gripper::sensor::width";
   std::string key_gripper_max_width = "gripper::model::max_width";
-  std::string key_gripper_status    = "gripper::driver::status";
+  std::string key_gripper_status    = "gripper::status";
 
   bool use_json = false;
 
