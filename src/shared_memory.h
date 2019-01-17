@@ -36,7 +36,8 @@ struct SharedMemory {
   // std::atomic<std::array<double, 3>> com_load   = {{{0.}}};
   // std::atomic<std::array<double, 9>> I_com_load = {{{0.}}};
 
-  std::atomic<ControlMode> control_mode = {ControlMode::FLOATING};
+  std::atomic<ControlMode> control_mode     = {ControlMode::FLOATING};
+  std::atomic<ControlStatus> control_status = {ControlStatus::FINISHED};
 
   volatile sig_atomic_t* runloop = nullptr;
 };

@@ -22,6 +22,7 @@ void RunControlLoop(const Args& args, const std::shared_ptr<SharedMemory>& globa
   ControlMode control_mode = globals->control_mode;
   while (*globals->runloop) {
     try {
+      globals->control_status = ControlStatus::RUNNING;
       switch (control_mode) {
         case ControlMode::FLOATING:
         case ControlMode::TORQUE:
@@ -36,6 +37,8 @@ void RunControlLoop(const Args& args, const std::shared_ptr<SharedMemory>& globa
         default:
           throw std::runtime_error("Controller mode " + ControlModeToString(control_mode) + " not supported.");
       }
+      globals->control_status = ControlStatus::FINISHED;
+      control_mode = globals->control_mode;
     } catch (const SwitchControllerException& e) {
       // Switch controllers
       control_mode = globals->control_mode;
@@ -91,6 +94,16 @@ std::string ControlModeToString(ControlMode mode) {
     case ControlMode::CARTESIAN_VELOCITY: return "cartesian_velocity";
     default: return "floating";
   }
+}
+
+std::stringstream& operator<<(std::stringstream& ss, ControlStatus status) {
+  static const std::map<ControlStatus, std::string> kControlStatusToString = {
+    {ControlStatus::FINISHED, "finished"},
+    {ControlStatus::RUNNING, "running"},
+    {ControlStatus::ERROR, "error"}
+  };
+  ss << kControlStatusToString.at(status);
+  return ss;
 }
 
 }  // namespace FrankaDriver

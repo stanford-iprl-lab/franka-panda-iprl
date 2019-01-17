@@ -34,6 +34,12 @@ std::stringstream& operator<<(std::stringstream& ss, ControlMode mode);
 std::stringstream& operator>>(std::stringstream& ss, ControlMode& mode);
 std::string ControlModeToString(ControlMode mode);
 
+enum class ControlStatus {
+  RUNNING, FINISHED, ERROR
+};
+
+std::stringstream& operator<<(std::stringstream& ss, ControlStatus status);
+
 class SwitchControllerException : public std::runtime_error {
  public:
   SwitchControllerException(const std::string msg) : std::runtime_error(msg) {}

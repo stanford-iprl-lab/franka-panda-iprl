@@ -98,6 +98,7 @@ Args ParseYaml(const char* filename) {
     args.key_dtau              = yaml["redis"]["keys"]["dtau"].as<std::string>();
     args.key_inertia_ee        = yaml["redis"]["keys"]["inertia_ee"].as<std::string>();
     args.key_driver_status     = yaml["redis"]["keys"]["driver_status"].as<std::string>();
+    args.key_control_status    = yaml["redis"]["keys"]["control_status"].as<std::string>();
 
     args.key_gripper_width     = yaml["redis"]["keys"]["gripper_width"].as<std::string>();
     args.key_gripper_max_width = yaml["redis"]["keys"]["gripper_max_width"].as<std::string>();
@@ -225,6 +226,7 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  key_dtau: " << args.key_dtau << std::endl
      << "  key_inertia_ee: " << args.key_inertia_ee << std::endl
      << "  key_driver_status: " << args.key_driver_status << std::endl
+     << "  key_control_status: " << args.key_control_status << std::endl
      << "  key_gripper_width: " << args.key_gripper_width << std::endl
      << "  key_gripper_max_width: " << args.key_gripper_max_width << std::endl
      << "  key_gripper_status: " << args.key_gripper_status << std::endl

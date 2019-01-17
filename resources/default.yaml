@@ -50,6 +50,7 @@ redis:
     dtau:              "sensor::dtau"
     inertia_ee:        "model::inertia_ee"
     driver_status:     "driver::status"
+    control_status:    "control::status"
     gripper_width:     "gripper::sensor::width"
     gripper_grasped:   "gripper::sensor::grasped"
     gripper_max_width: "gripper::model::max_width"
