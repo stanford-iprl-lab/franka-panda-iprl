@@ -88,7 +88,7 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
       yaml_ee["I_com"] = std::array<double, 6>{I_com_ee[0], I_com_ee[4], I_com_ee[8],
                                                I_com_ee[1], I_com_ee[2], I_com_ee[5]};
       YAML::Emitter json_ee;
-      json_ee << YAML::DoubleQuoted << YAML::Flow << yaml_ee;
+      json_ee << YAML::Flow << yaml_ee;
       redis_client.set(KEY_INERTIA_EE, json_ee.c_str());
 
       redis_client.set(KEY_CONTROL_STATUS, globals->control_status.load());

@@ -36,12 +36,14 @@ redis:
     q_des:             "control::q"
     dq_des:            "control::dq"
     control_mode:      "control::mode"
-    inertia_load:      "control::inertia_load"
-    gripper_mode:      "gripper::control::mode"
+
     gripper_width_des: "gripper::control::width"
     gripper_speed_des: "gripper::control::speed"
     gripper_force_des: "gripper::control::force"
     gripper_grasp_tol: "gripper::control::grasp_tol"
+    gripper_mode:      "gripper::control::mode"
+
+    inertia_load:      "control::inertia_load"
 
     # Keys written by driver
     q:                 "sensor::q"
@@ -51,9 +53,10 @@ redis:
     inertia_ee:        "model::inertia_ee"
     driver_status:     "driver::status"
     control_status:    "control::status"
+
     gripper_width:     "gripper::sensor::width"
-    gripper_grasped:   "gripper::sensor::grasped"
     gripper_max_width: "gripper::model::max_width"
+    gripper_status:    "gripper::status"
 
   # Use JSON or Matlab formatting for matrices in Redis
   use_json: false
