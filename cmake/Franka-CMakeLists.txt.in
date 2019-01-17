@@ -25,5 +25,5 @@ ExternalProject_Add(Franka
     # Make
     BUILD_COMMAND ${FRANKA_PANDA_CMAKE_DIR}/ncpu.sh | xargs -I {} make -j{}
     # Install
-    # INSTALL_COMMAND ""
+    INSTALL_COMMAND ""
 )
