@@ -99,7 +99,7 @@ The keys can be specified in the YAML configuration file (see `<franka-panda.git
 
 ### Robot control commands
 
-The control mode should be set ***after** the corresponding control command has already been set (e.g. set `tau = "0 0 0 0 0 0 0"` before `mode = "torque"`), or simultaneously with MSET. Otherwise, the robot may try to execute control with stale command values.
+The control mode should be set ***after** the corresponding control command has already been set (e.g. set `tau = "0 0 0 0 0 0 0"` before `mode = torque`), or simultaneously with MSET. Otherwise, the robot may try to execute control with stale command values.
 
 - `franka_panda::control::tau`: Desired control torques used during torque control mode. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
 - `franka_panda::control::pose`: Desired transformation matrix from end-effector to world frame. \[4x4 array (e.g. `"1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1"`)\].
@@ -110,13 +110,13 @@ The control mode should be set ***after** the corresponding control command has 
 The gripper has two modes: [grasp](https://frankaemika.github.io/libfranka/classfranka_1_1Gripper.html#a19b711cc7eb4cb560d1c52f0864fdc0d) and [move](https://frankaemika.github.io/libfranka/classfranka_1_1Gripper.html#a331720c9e26f23a5fa3de1e171b1a684). Both of these commands are blocking and must finish before receiving the next command.
 The `move` command takes in a `width` and `speed`. The `grasp` command takes in `width`, `speed`, `force`, and `grasp_tol`.
 
-To prevent race conditions, the control parameters should be set ***simultaneously*** with the `mode` using MSET. In other words, `mode = "move"` should be MSET along with `width` and `speed`.
+The control mode should be set ***after*** the control parameters have already been set (e.g. set `width = 0` and `speed = 0.01` before `mode = move`), or simultaneously with MSET.
 
 - `franka_panda::gripper::control::width`: Desired gripper width. \[Positive double\].
 - `franka_panda::gripper::control::speed`: Max gripper speed \[Positive double\].
 - `franka_panda::gripper::control::force`: Max gripper force (used only for grasp command). \[Positive double\].
 - `franka_panda::gripper::control::grasp_tol`: Width tolerances to determine whether object is grasped. \[Positive 2d array (e.g. `"0.05 0.05"`)\].
-- `franka_panda::gripper::control::mode`: Gripper control mode. \[One of {`"grasp"`, `"move"`}\].
+- `franka_panda::gripper::control::mode`: Gripper control mode. After a control command has finished, the driver will reset the mode to `idle`. \[One of {`"idle"`, `"grasp"`, `"move"`}\].
 
 ### Robot status
 
@@ -124,7 +124,7 @@ These keys will be set by the driver in response to control commands.
 
 - `franka_panda::driver::status`: If the driver turns `off` (either due to a robot error or user interrupt signal), the controller should ***stop*** immediately. Restarting the driver with an old controller already running is dangerous. \[One of {`"running"`, `"off"`}\].
 - `franka_panda::control::status`: If the cartesian pose controller successfully reaches the target pose, the control status will be set to `finished`. This way the controller knows when to execute the next cartesian pose command. \[One of {`"running"`, `"finished"`, `"error"`}\].
-- `franka_panda::gripper::status`: When a gripper command finishes, the `status` will be set to `grasped` if the object has been classified as grasped or `open` otherwise. If the gripper is not running, the `status` will be `off`. \[One of {`"open"`, `"grasped"`, `"off"`}\].
+- `franka_panda::gripper::status`: If the gripper is not running, the status will be `off`, and during a gripper command, it will be `grasping`. When a gripper command finishes, the `status` will be set to `grasped` if the object has been classified as grasped or `not_grasped` otherwise. \[One of {`"off"`, `"grasping"`, `"grasped"`, `"not_grasped"`}\].
 
 ### Robot sensor values
 
