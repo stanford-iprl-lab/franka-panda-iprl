@@ -37,6 +37,7 @@ void GripperThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   // Connect to Redis
   ctrl_utils::RedisClient redis_client;
   redis_client.connect(args.ip_redis, args.port_redis);
+  redis_client.sync_set(KEY_GRIPPER_STATUS, GripperStatus::OFF);
 
   try {
     // Connect to gripper
@@ -46,11 +47,11 @@ void GripperThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
     // Initialize gripper status
     GripperMode mode = GripperMode::IDLE;
     double width = state.width;
-    double speed = 0.;
+    double speed = 0.07;
     double force = 0.;
     GraspTolerance grasp_tol = { 0.005, 0.005 };
     bool grasped = false;
-    GripperStatus status = GripperStatus::OPEN;
+    GripperStatus status = GripperStatus::NOT_GRASPED;
 
     // Set default Redis keys
     redis_client.mset(std::make_pair(KEY_GRIPPER_MODE, mode),
@@ -79,14 +80,16 @@ void GripperThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
 
       switch (mode) {
         case GripperMode::GRASP:
+          redis_client.sync_set(KEY_GRIPPER_STATUS, GripperStatus::GRASPING);
           grasped = gripper.grasp(width, speed, force, grasp_tol.inner, grasp_tol.outer);
-          status = grasped ? GripperStatus::GRASPED : GripperStatus::OPEN;
+          status = grasped ? GripperStatus::GRASPED : GripperStatus::NOT_GRASPED;
           redis_client.mset(std::make_pair(KEY_GRIPPER_MODE, GripperMode::IDLE),
                             std::make_pair(KEY_GRIPPER_STATUS, status));
           break;
         case GripperMode::MOVE:
+          redis_client.sync_set(KEY_GRIPPER_STATUS, GripperStatus::GRASPING);
           grasped = gripper.move(width, speed);
-          status = grasped ? GripperStatus::GRASPED : GripperStatus::OPEN;
+          status = grasped ? GripperStatus::GRASPED : GripperStatus::NOT_GRASPED;
           redis_client.mset(std::make_pair(KEY_GRIPPER_MODE, GripperMode::IDLE),
                             std::make_pair(KEY_GRIPPER_STATUS, status));
           break;
@@ -139,9 +142,10 @@ std::stringstream& operator>>(std::stringstream& ss, GripperMode& mode) {
 
 std::stringstream& operator<<(std::stringstream& ss, GripperStatus status) {
   static const std::map<GripperStatus, std::string> kGripperStatusToString = {
-    {GripperStatus::OPEN,    "open"},
-    {GripperStatus::GRASPED, "grasped"},
-    {GripperStatus::OFF,     "off"}
+    {GripperStatus::OFF,         "off"},
+    {GripperStatus::GRASPING,    "grasping"},
+    {GripperStatus::NOT_GRASPED, "not_grasped"},
+    {GripperStatus::GRASPED,     "grasped"}
   };
   ss << kGripperStatusToString.at(status);
   return ss;

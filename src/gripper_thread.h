@@ -23,7 +23,7 @@ enum class GripperMode { IDLE, MOVE, GRASP };
 
 std::stringstream& operator<<(std::stringstream& ss, GripperMode mode);
 
-enum class GripperStatus { OPEN, GRASPED, OFF };
+enum class GripperStatus { OFF, GRASPING, NOT_GRASPED, GRASPED };
 
 std::stringstream& operator>>(std::stringstream& ss, GripperMode& mode);
 std::stringstream& operator<<(std::stringstream& ss, GripperStatus status);
