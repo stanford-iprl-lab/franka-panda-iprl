@@ -48,17 +48,6 @@ void RunControlLoop(const Args& args, const std::shared_ptr<SharedMemory>& globa
   }
 }
 
-void RedisSetSensorValues(const std::shared_ptr<SharedMemory>& globals,
-                          const franka::Model& model, const franka::RobotState& state) {
-  globals->q        = state.q;
-  globals->dq       = state.dq;
-  globals->tau      = state.tau_J;
-  globals->dtau     = state.dtau_J;
-  globals->m_ee     = state.m_ee;
-  globals->com_ee   = state.F_x_Cee;
-  globals->I_com_ee = state.I_ee;
-}
-
 std::stringstream& operator>>(std::stringstream& ss, ControlMode& mode) {
   static const std::map<std::string, ControlMode> kStringToControlMode = {
     {"floating", ControlMode::FLOATING},
