@@ -18,7 +18,7 @@
 
 #include <ctrl_utils/redis_client.h>
 #include <ctrl_utils/timer.h>
-#include <yaml-cpp/yaml.h>
+#include <nlohmann/json.hpp>
 
 #include "string_utils.h"
 
@@ -81,15 +81,13 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
       redis_client.set(KEY_TAU,  ArrayToString(globals->tau.load(),  args.use_json));
       redis_client.set(KEY_DTAU, ArrayToString(globals->dtau.load(), args.use_json));
 
-      YAML::Node yaml_ee;
-      yaml_ee["m"] = globals->m_ee.load();
-      yaml_ee["com"] = globals->com_ee.load();
+      nlohmann::json json_ee;
+      json_ee["m"] = globals->m_ee.load();
+      json_ee["com"] = globals->com_ee.load();
       std::array<double, 9> I_com_ee = globals->I_com_ee;
-      yaml_ee["I_com"] = std::array<double, 6>{I_com_ee[0], I_com_ee[4], I_com_ee[8],
+      json_ee["I_com"] = std::array<double, 6>{I_com_ee[0], I_com_ee[4], I_com_ee[8],
                                                I_com_ee[1], I_com_ee[2], I_com_ee[5]};
-      YAML::Emitter json_ee;
-      json_ee << YAML::Flow << yaml_ee;
-      redis_client.set(KEY_INERTIA_EE, json_ee.c_str());
+      redis_client.set(KEY_INERTIA_EE, json_ee.dump());
 
       redis_client.set(KEY_CONTROL_STATUS, globals->control_status.load());
 
