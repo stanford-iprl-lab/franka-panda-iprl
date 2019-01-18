@@ -36,7 +36,7 @@ struct GraspTolerance {
 std::stringstream& operator<<(std::stringstream& ss, const GraspTolerance& grasp_tol);
 std::stringstream& operator>>(std::stringstream& ss, GraspTolerance& grasp_tol);
 
-void GripperThread(const Args& args, std::shared_ptr<SharedMemory> globals);
+void GripperThread(std::shared_ptr<const Args> args, std::shared_ptr<SharedMemory> globals);
 
 }  // namespace franka_driver
 

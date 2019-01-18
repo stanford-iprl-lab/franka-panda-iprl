@@ -24,7 +24,8 @@
 
 namespace franka_driver {
 
-void GripperThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
+void GripperThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMemory> globals) {
+  const Args& args = *p_args;
   const std::string KEY_GRIPPER_MODE      = args.key_prefix + args.key_gripper_mode;
   const std::string KEY_GRIPPER_WIDTH_DES = args.key_prefix + args.key_gripper_width_des;
   const std::string KEY_GRIPPER_SPEED_DES = args.key_prefix + args.key_gripper_speed_des;
@@ -103,7 +104,7 @@ void GripperThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
       redis_client.sync_commit();
     }
   } catch (const franka::NetworkException& e) {
-    std::cerr << "GripperThread(): Unable to connect to gripper at " << args.ip_robot << "." << std::endl;
+    std::cerr << "Unable to connect to gripper at " << args.ip_robot << "." << std::endl;
   } catch (const std::exception& e) {
     std::cerr << "GripperThread(): " << e.what() << std::endl;
   }

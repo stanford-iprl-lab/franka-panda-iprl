@@ -24,11 +24,14 @@
 
 namespace franka_driver {
 
-void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
+void RedisThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMemory> globals,
+                 std::shared_ptr<const franka::Model> model, franka::RobotState state) {
+  const Args& args = *p_args;
   const std::string KEY_Q              = args.key_prefix + args.key_q;
   const std::string KEY_DQ             = args.key_prefix + args.key_dq;
   const std::string KEY_TAU            = args.key_prefix + args.key_tau;
   const std::string KEY_DTAU           = args.key_prefix + args.key_dtau;
+  const std::string KEY_POSE           = args.key_prefix + args.key_pose;
   const std::string KEY_INERTIA_EE     = args.key_prefix + args.key_inertia_ee;
   const std::string KEY_TAU_COMMAND    = args.key_prefix + args.key_tau_des;
   const std::string KEY_POSE_COMMAND   = args.key_prefix + args.key_pose_des;
@@ -47,6 +50,20 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
   // redis_client.set(KEY_M_LOAD,     std::to_string(globals->m_load.load()));
   // redis_client.set(KEY_COM_LOAD,   ArrayToString(globals->com_load.load(),   args.use_json));
   // redis_client.set(KEY_I_COM_LOAD, ArrayToString(globals->I_com_load.load(), args.use_json));
+
+  // Set initial state
+  redis_client.set(KEY_Q,    ArrayToString(state.q,    args.use_json));
+  redis_client.set(KEY_DQ,   ArrayToString(state.dq,   args.use_json));
+  redis_client.set(KEY_TAU,  ArrayToString(state.tau_J,  args.use_json));
+  redis_client.set(KEY_DTAU, ArrayToString(state.dtau_J, args.use_json));
+  redis_client.set(KEY_POSE, ArrayToString(model->pose(franka::Frame::kEndEffector, state), args.use_json));
+  nlohmann::json json_ee;
+  json_ee["m"] = state.m_ee;
+  json_ee["com"] = state.F_x_Cee;
+  json_ee["I_com"] = std::array<double, 6>{state.I_ee[0], state.I_ee[4], state.I_ee[8],
+                                           state.I_ee[1], state.I_ee[2], state.I_ee[5]};
+  redis_client.set(KEY_INERTIA_EE, json_ee.dump());
+
   redis_client.sync_commit();
 
   // Set driver to running
@@ -67,45 +84,50 @@ void RedisThread(const Args& args, std::shared_ptr<SharedMemory> globals) {
       std::string key_command;
       switch (control_mode) {
         case ControlMode::CARTESIAN_POSE:
+        case ControlMode::DELTA_CARTESIAN_POSE:
           key_command = KEY_POSE_COMMAND;
           break;
-        default:
+        case ControlMode::FLOATING:
+        case ControlMode::TORQUE:
           key_command = KEY_TAU_COMMAND;
+          break;
+        default:
           break;
       };
       std::future<std::string> future_command = redis_client.get<std::string>(key_command);
 
-      // Set sensor values
-      redis_client.set(KEY_Q,    ArrayToString(globals->q.load(),    args.use_json));
+      // Set Redis values
+      state.q = globals->q;
+      redis_client.set(KEY_Q,    ArrayToString(state.q,              args.use_json));
       redis_client.set(KEY_DQ,   ArrayToString(globals->dq.load(),   args.use_json));
       redis_client.set(KEY_TAU,  ArrayToString(globals->tau.load(),  args.use_json));
       redis_client.set(KEY_DTAU, ArrayToString(globals->dtau.load(), args.use_json));
-
-      nlohmann::json json_ee;
-      json_ee["m"] = globals->m_ee.load();
-      json_ee["com"] = globals->com_ee.load();
-      std::array<double, 9> I_com_ee = globals->I_com_ee;
-      json_ee["I_com"] = std::array<double, 6>{I_com_ee[0], I_com_ee[4], I_com_ee[8],
-                                               I_com_ee[1], I_com_ee[2], I_com_ee[5]};
-      redis_client.set(KEY_INERTIA_EE, json_ee.dump());
-
+      redis_client.set(KEY_POSE, ArrayToString(model->pose(franka::Frame::kEndEffector, state)));
       redis_client.set(KEY_CONTROL_STATUS, globals->control_status.load());
-
-      // Commit Redis commands
       redis_client.commit();
 
       // Wait for command futures
       switch (control_mode) {
         case ControlMode::CARTESIAN_POSE:
+        case ControlMode::DELTA_CARTESIAN_POSE:
           globals->pose_command = StringToTransform(future_command.get(), args.use_json);
           break;
-        default:
+        case ControlMode::FLOATING:
+        case ControlMode::TORQUE:
           globals->tau_command = StringToArray<7>(future_command.get(), args.use_json);
+          break;
+        default:
           break;
       }
 
       // Switch control mode
-      globals->control_mode = control_mode;
+      if (globals->send_idle_mode) {
+        globals->control_mode = ControlMode::IDLE;
+        redis_client.sync_set(KEY_CONTROL_MODE, globals->control_mode.load());
+        globals->send_idle_mode = false;
+      } else {
+        globals->control_mode = control_mode;
+      }
 
     } catch (const std::exception& e) {
       std::cerr << e.what() << std::endl;

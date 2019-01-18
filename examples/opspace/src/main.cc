@@ -20,11 +20,10 @@
 #include <ctrl_utils/eigen_string.h>
 #include <ctrl_utils/redis_client.h>
 #include <ctrl_utils/timer.h>
+#include <franka_panda/articulated_body.h>
 #include <spatial_dyn/parsers/json.h>
 #include <spatial_dyn/parsers/urdf.h>
 #include <yaml-cpp/yaml.h>
-
-#include "articulated_body.h"
 
 namespace {
 
@@ -76,9 +75,9 @@ int main(int argc, char* argv[]) {
   const bool kSim = (argc > 2 && std::string(argv[2]) == "--sim");
 
   // Create Redis client and timer
-  utils::RedisClient redis_client;
+  ctrl_utils::RedisClient redis_client;
   redis_client.connect();
-  utils::Timer timer(1000);
+  ctrl_utils::Timer timer(1000);
 
   // Load robot
   franka_panda::ArticulatedBody ab = spatial_dyn::urdf::LoadModel(argv[1]);

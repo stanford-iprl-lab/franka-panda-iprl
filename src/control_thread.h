@@ -27,7 +27,7 @@ namespace franka_driver {
 struct SharedMemory;
 
 enum class ControlMode {
-  FLOATING, TORQUE, JOINT_POSITION, JOINT_VELOCITY, CARTESIAN_POSE, CARTESIAN_VELOCITY
+  IDLE, FLOATING, TORQUE, JOINT_POSITION, JOINT_VELOCITY, CARTESIAN_POSE, DELTA_CARTESIAN_POSE, CARTESIAN_VELOCITY
 };
 
 std::stringstream& operator<<(std::stringstream& ss, ControlMode mode);
@@ -55,7 +55,7 @@ CreateTorqueController(const Args& args, const std::shared_ptr<SharedMemory>& gl
 
 std::function<franka::CartesianPose(const franka::RobotState&, franka::Duration)>
 CreateCartesianPoseController(const Args& args, const std::shared_ptr<SharedMemory>& globals,
-                              const franka::Model& model);
+                              franka::Robot& robot, const franka::Model& model);
 
 }  // namespace franka_driver
 

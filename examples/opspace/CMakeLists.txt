@@ -53,16 +53,3 @@ target_sources(${FRANKA_OPSPACE_BIN}
     PRIVATE
         ${FRANKA_OPSPACE_SRC_DIR}/main.cc
 )
-
-find_package(pybind11 QUIET)
-if(NOT pybind11_FOUND)
-    set(PYBIND11_LIB_DIR ${FRANKA_PANDA_EXT_DIR}/pybind11.git)
-    add_subdirectory(${PYBIND11_LIB_DIR} ${CMAKE_CURRENT_BINARY_DIR}/pybind11)
-endif()
-
-pybind11_add_module(spatialdyn_frankapanda ${FRANKA_OPSPACE_SRC_DIR}/python_bindings.cc)
-target_link_libraries(spatialdyn_frankapanda
-    PUBLIC
-        spatial_dyn::spatial_dyn
-        franka_panda::franka_panda
-        pybind11::pybind11)

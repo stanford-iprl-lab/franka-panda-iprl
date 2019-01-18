@@ -29,12 +29,10 @@ CreateTorqueController(const Args& args, const std::shared_ptr<SharedMemory>& gl
     globals->dq       = state.dq;
     globals->tau      = state.tau_J;
     globals->dtau     = state.dtau_J;
-    globals->m_ee     = state.m_ee;
-    globals->com_ee   = state.F_x_Cee;
-    globals->I_com_ee = state.I_ee;
 
     // Get control mode
     ControlMode control_mode = globals->control_mode;
+
     if (control_mode == ControlMode::TORQUE) {
 
       // Get command torques

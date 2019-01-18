@@ -36,30 +36,31 @@ int main(int argc, char* argv[]) {
 
   try {
     // Parse args
-    franka_driver::Args args = franka_driver::ParseArgs(argc, argv);
-    // std::cout << args << std::endl;
+    auto args = std::make_shared<franka_driver::Args>(franka_driver::ParseArgs(argc, argv));
 
     // Connect to robot
-    franka::Robot robot(args.ip_robot);
-    franka::Model model = robot.loadModel();
+    std::cout << "Connecting to robot at " << args->ip_robot << "..." << std::endl;
+    franka::Robot robot(args->ip_robot);
+    auto model = std::make_shared<franka::Model>(robot.loadModel());
 
-    // Set robot parameters
-    robot.setCollisionBehavior(args.tau_contact_thresholds_acc, args.tau_collision_thresholds_acc,
-                               args.tau_contact_thresholds,     args.tau_collision_thresholds,
-                               args.f_contact_thresholds_acc,   args.f_collision_thresholds_acc,
-                               args.f_contact_thresholds,       args.f_collision_thresholds);
-    try {
-      robot.setJointImpedance(args.K_joint);
-    } catch (franka::CommandException& e) {
-      std::cerr << e.what() << std::endl;
+    if (robot.readOnce().robot_mode != franka::RobotMode::kIdle) {
       std::cerr << std::endl << "Make sure the robot isn't close to any joint limits and the e-stop is released." << std::endl;
       g_runloop = false;
       return 0;
     }
-    robot.setCartesianImpedance(args.K_cart);
-    robot.setEE(args.T_ee_to_flange);
-    robot.setK(args.T_op_point_to_ee);
-    robot.setLoad(args.load_mass, args.load_com, args.load_inertia);
+    std::cout << "Configuring robot parameters..." << std::endl;
+
+    // Set robot parameters
+    robot.setCollisionBehavior(args->tau_contact_thresholds_acc, args->tau_collision_thresholds_acc,
+                               args->tau_contact_thresholds,     args->tau_collision_thresholds,
+                               args->f_contact_thresholds_acc,   args->f_collision_thresholds_acc,
+                               args->f_contact_thresholds,       args->f_collision_thresholds);
+    robot.setJointImpedance(args->K_joint);
+    robot.setCartesianImpedance(args->K_cart);
+    // robot.setEE(args->T_ee_to_flange);
+    robot.setK(args->T_op_point_to_ee);
+    robot.setLoad(args->load_mass, args->load_com, args->load_inertia);
+    franka::RobotState state_init = robot.readOnce();
 
     // Set ctrl-c handler
     signal(SIGINT, stop);
@@ -69,13 +70,16 @@ int main(int argc, char* argv[]) {
     globals->runloop = &g_runloop;
 
     // Run Redis thread
-    redis_thread = std::thread(franka_driver::RedisThread, args, globals);
+    std::cout << "Starting Redis..." << std::endl;
+    redis_thread = std::thread(franka_driver::RedisThread, args, globals, model, state_init);
 
     // Run gripper thread
+    std::cout << "Starting gripper..." << std::endl;
     gripper_thread = std::thread(franka_driver::GripperThread, args, globals);
 
     // Run controller thread
-    RunControlLoop(args, globals, robot, model);
+    std::cout << "Starting control loop..." << std::endl;
+    RunControlLoop(*args, globals, robot, *model);
 
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;

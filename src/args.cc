@@ -96,6 +96,7 @@ Args ParseYaml(const char* filename) {
     args.key_dq                = yaml["redis"]["keys"]["dq"].as<std::string>();
     args.key_tau               = yaml["redis"]["keys"]["tau"].as<std::string>();
     args.key_dtau              = yaml["redis"]["keys"]["dtau"].as<std::string>();
+    args.key_pose              = yaml["redis"]["keys"]["pose"].as<std::string>();
     args.key_inertia_ee        = yaml["redis"]["keys"]["inertia_ee"].as<std::string>();
     args.key_driver_status     = yaml["redis"]["keys"]["driver_status"].as<std::string>();
     args.key_control_status    = yaml["redis"]["keys"]["control_status"].as<std::string>();
@@ -224,6 +225,7 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  key_dq: " << args.key_dq << std::endl
      << "  key_tau: " << args.key_tau << std::endl
      << "  key_dtau: " << args.key_dtau << std::endl
+     << "  key_pose: " << args.key_pose << std::endl
      << "  key_inertia_ee: " << args.key_inertia_ee << std::endl
      << "  key_driver_status: " << args.key_driver_status << std::endl
      << "  key_control_status: " << args.key_control_status << std::endl

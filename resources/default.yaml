@@ -50,6 +50,7 @@ redis:
     dq:                "sensor::dq"
     tau:               "sensor::tau"
     dtau:              "sensor::dtau"
+    pose:              "sensor::pose"
     inertia_ee:        "model::inertia_ee"
     driver_status:     "driver::status"
     control_status:    "control::status"

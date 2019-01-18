@@ -292,22 +292,29 @@ franka::CartesianPose MotionGenerator::operator()(const franka::RobotState& robo
 
 std::function<franka::CartesianPose(const franka::RobotState&, franka::Duration)>
 CreateCartesianPoseController(const Args& args, const std::shared_ptr<SharedMemory>& globals,
-                              const franka::Model& model) {
+                              franka::Robot& robot, const franka::Model& model) {
   std::shared_ptr<MotionGenerator> motion_generator = std::make_shared<MotionGenerator>();
-  motion_generator->reset(1., globals->pose_command);
+  
+  franka::RobotState state = robot.readOnce();
+  std::array<double, 16> pose_command = globals->pose_command;
+  if (globals->control_mode == ControlMode::DELTA_CARTESIAN_POSE) {
+    Eigen::Map<Eigen::Matrix4d> start_pose_e(state.O_T_EE.data());
+    Eigen::Map<Eigen::Matrix4d> command_pose_e(pose_command.data());
+    command_pose_e.topRightCorner<3,1>() += start_pose_e.topRightCorner<3,1>();
+    command_pose_e.topLeftCorner<3,3>() = command_pose_e.topLeftCorner<3,3>() * start_pose_e.topLeftCorner<3,3>();
+  }
+  motion_generator->reset(1., pose_command);
+
   return [globals, motion_generator](const franka::RobotState& state, franka::Duration dt) -> franka::CartesianPose {
     if (!*globals->runloop) {
       throw std::runtime_error("TorqueController(): SIGINT.");
     }
 
     // Set sensor values
-    globals->q        = state.q;
-    globals->dq       = state.dq;
-    globals->tau      = state.tau_J;
-    globals->dtau     = state.dtau_J;
-    globals->m_ee     = state.m_ee;
-    globals->com_ee   = state.F_x_Cee;
-    globals->I_com_ee = state.I_ee;
+    globals->q    = state.q;
+    globals->dq   = state.dq;
+    globals->tau  = state.tau_J;
+    globals->dtau = state.dtau_J;
 
     // Get command torques
     if (globals->control_mode != ControlMode::CARTESIAN_POSE) {

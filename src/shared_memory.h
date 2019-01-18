@@ -28,14 +28,11 @@ struct SharedMemory {
   std::atomic<std::array<double, 7>> tau  = {{{0.}}};
   std::atomic<std::array<double, 7>> dtau = {{{0.}}};
 
-  std::atomic<double> m_ee                    = {0.};
-  std::atomic<std::array<double, 3>> com_ee   = {{{0.}}};
-  std::atomic<std::array<double, 9>> I_com_ee = {{{0.}}};
-
   // std::atomic<double> m_load                    = {0.};
   // std::atomic<std::array<double, 3>> com_load   = {{{0.}}};
   // std::atomic<std::array<double, 9>> I_com_load = {{{0.}}};
 
+  std::atomic<bool> send_idle_mode          = {false};
   std::atomic<ControlMode> control_mode     = {ControlMode::FLOATING};
   std::atomic<ControlStatus> control_status = {ControlStatus::FINISHED};
 

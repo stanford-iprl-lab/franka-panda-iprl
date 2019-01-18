@@ -132,9 +132,45 @@
 				<mesh filename="graphics/link7.obj" />
 			</geometry>
 		</visual>
+		<visual>
+			<origin xyz="0 0 0.107" rpy="0 0 -0.78539816339" />
+			<geometry>
+				<mesh filename="graphics/hand.obj" />
+			</geometry>
+		</visual>
+		<visual>
+			<origin xyz="0 0 0.1654" rpy="0 0 2.35619449019" />
+			<geometry>
+				<mesh filename="graphics/finger.obj" />
+			</geometry>
+		</visual>
+		<visual>
+			<origin xyz="0 0 0.1654" rpy="0 0 -0.78539816339" />
+			<geometry>
+				<mesh filename="graphics/finger.obj" />
+			</geometry>
+		</visual>
 		<collision>
 			<geometry>
 				<mesh filename="collision/link7.stl" />
+			</geometry>
+		</collision>
+		<collision>
+			<origin xyz="0 0 0.107" rpy="0 0 -0.78539816339" />
+			<geometry>
+				<mesh filename="collision/hand.stl" />
+			</geometry>
+		</collision>
+		<collision>
+			<origin xyz="0 0 0.1654" rpy="0 0 2.35619449019" />
+			<geometry>
+				<mesh filename="collision/finger.stl" />
+			</geometry>
+		</collision>
+		<collision>
+			<origin xyz="0 0 0.1654" rpy="0 0 -0.78539816339" />
+			<geometry>
+				<mesh filename="collision/finger.stl" />
 			</geometry>
 		</collision>
 	</link>

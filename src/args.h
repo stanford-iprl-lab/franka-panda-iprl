@@ -50,6 +50,7 @@ struct Args {
   std::string key_dq                = "sensor::dq";
   std::string key_tau               = "sensor::tau";
   std::string key_dtau              = "sensor::dtau";
+  std::string key_pose              = "sensor::pose";
   std::string key_inertia_ee        = "model::inertia_ee";
   std::string key_driver_status     = "driver::status";
   std::string key_control_status    = "control::status";
