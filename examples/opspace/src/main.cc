@@ -15,9 +15,10 @@
 #include <iostream>   // std::cout
 #include <string>     // std::string
 #include <stdlib.h>   // realpath
-#include <unistd.h>   // getcwd
+#include <unistd.h>   // get_current_dir_name
 
 #include <ctrl_utils/eigen_string.h>
+#include <ctrl_utils/filesystem.h>
 #include <ctrl_utils/redis_client.h>
 #include <ctrl_utils/timer.h>
 #include <franka_panda/articulated_body.h>
@@ -49,7 +50,10 @@ const std::string KEY_TRAJ_ORI      = KEY_PREFIX + "trajectory::ori";
 const std::string KEY_TRAJ_POS_ERR  = KEY_PREFIX + "trajectory::pos_err";
 const std::string KEY_TRAJ_ORI_ERR  = KEY_PREFIX + "trajectory::ori_err";
 const std::string KEY_MODEL         = KEY_PREFIX + "model";
+
+const std::string kNameApp          = "simulator";
 const std::string KEY_WEB_RESOURCES = "webapp::resources";
+const std::string KEY_WEB_ARGS      = "webapp::" + kNameApp + "::args";
 
 // Controller gains
 const std::string KEY_KP_POS   = KEY_PREFIX + "control::kp_pos";
@@ -95,19 +99,15 @@ int main(int argc, char* argv[]) {
   }
 
   // Send model to visualizer
-  redis_client.sync_set(KEY_MODEL, spatial_dyn::json::Serialize(ab).dump());
-  std::string path_urdf;
-  {
-    char* c_path_cwd = get_current_dir_name();
-    std::string path_cwd(c_path_cwd);
-    free(c_path_cwd);
-    path_urdf = path_cwd + "/" + argv[1];
-    char* c_path_urdf = realpath(path_urdf.c_str(), NULL);
-    path_urdf = c_path_urdf;
-    free(c_path_urdf);
-    path_urdf = path_urdf.substr(0, path_urdf.find_last_of("/\\") + 1);
-  }
-  redis_client.hset(KEY_WEB_RESOURCES, "simulator", path_urdf);
+  redis_client.set(KEY_MODEL, spatial_dyn::json::Serialize(ab));
+  std::string path_urdf = ctrl_utils::AbsolutePath(ctrl_utils::CurrentPath() + "/" + argv[1]);
+  redis_client.hset(KEY_WEB_RESOURCES, kNameApp, ctrl_utils::ParentPath(path_urdf));
+  nlohmann::json web_keys;
+  web_keys["key_model"] = KEY_MODEL;
+  web_keys["key_q"]     = KEY_SENSOR_Q;
+  web_keys["key_traj"]  = KEY_TRAJ_POS;
+  redis_client.set(KEY_WEB_ARGS, web_keys);
+  redis_client.sync_commit();
 
   // Initialize parameters
   double kp_pos   = 40.;

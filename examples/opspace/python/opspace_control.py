@@ -47,7 +47,10 @@ def main():
     KEY_TRAJ_POS_ERR  = KEY_PREFIX + "trajectory::pos_err"
     KEY_TRAJ_ORI_ERR  = KEY_PREFIX + "trajectory::ori_err"
     KEY_MODEL         = KEY_PREFIX + "model"
+
+    NAME_APP          = "simulator"
     KEY_WEB_RESOURCES = "webapp::resources"
+    KEY_WEB_ARGS      = "webapp::" + NAME_APP + "::args"
 
     # Controller gains
     KEY_KP_POS   = KEY_PREFIX + "control::kp_pos"
@@ -77,7 +80,12 @@ def main():
     # Send model to visualizer
     redis_client.set(KEY_MODEL, str(ab))
     path_urdf = os.path.realpath(os.path.join(os.path.dirname(__file__), args.urdf))
-    redis_client.hset(KEY_WEB_RESOURCES, "simulator", os.path.dirname(path_urdf))
+    redis_client.hset(KEY_WEB_RESOURCES, NAME_APP, os.path.dirname(path_urdf))
+    redis_client.set(KEY_WEB_ARGS, json.dumps({
+        "key_model": KEY_MODEL,
+        "key_q":     KEY_SENSOR_Q,
+        "key_traj":  KEY_TRAJ_POS
+    }))
 
     # Initialize parameters
     kp_pos   = 40.
