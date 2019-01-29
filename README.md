@@ -3,8 +3,8 @@ Franka Panda
 Redis driver for the Franka Panda.
 
 
-Install
--------
+Installation
+------------
 
 This driver has been tested on Ubuntu 16.04 with C++14.
 
@@ -29,8 +29,8 @@ This driver has been tested on Ubuntu 16.04 with C++14.
    make
    ```
 
-Usage
------
+Driver Usage
+------------
 
 1. Open the robot interface by connecting to the ip address of the controller in
    your web browser (e.g. ```172.16.0.2```).
@@ -183,6 +183,65 @@ These keys will be set by the driver once at the start.
   array[double[6]]>}\].
 - `franka\_panda::gripper::model::max\_width`: Max width of the gripper computed
   via homing. \[Positive double\].
+
+Dynamics Library API Quick Reference
+------------------------------------
+
+### Model Class
+
+C++: `franka\_panda::Model`, Python: `frankapanda.Model`
+
+- `dof`: Degrees of freedom (C++: `dof()`, Python: `dof`).
+- `q`: Joint position (C++: `q()`/`set\_q()`, Python: `q`).
+- `dq`: Joint position (C++: `dq()`/`set\_dq()`, Python: `dq`).
+- `m\_load`: Load mass (C++: `m\_load()`/`set\_m\_load()`, Python: `m\_load`).
+- `com\_load`: Load center of mass (C++: `com\_load()`/`set\_com\_load()`, Python: `com\_load`).
+- `I\_com\_load`: Load inertia as a vector [Ixx Iyy Izz Ixy Ixz Iyz] (C++:
+  `I\_com\_load()`/`set\_I\_com\_load()`, Python: `I\_com\_load`).
+- `I\_com\_load\_matrix`: Load inertia as a 3x3 matrix (C++:
+  `I\_com\_load\_matrix()`/`set\_I\_com\_load\_matrix()`, Python: `I\_com\_load\_matrix`).
+- `set\_load()`: Parse the load json string output by the driver.
+- `g`: Gravity vector (C++: `g()`, Python: `g`)
+- `inertia\_compensation`: Terms added to the last 3 diagonal terms of the joint
+  space inertia matrix (C++:
+  `inertia\_compensation()`/`set\_inertia\_compensation()`, Python:
+  `inertia\_compensation`).
+- `stiction\_coefficients`: Stiction coefficients for the last 3 joints. (C++:
+  `stiction\_coefficients()`/`set\_stiction\_coefficients()`, Python:
+  `stiction\_coefficients`).
+- `stiction\_activations`: Threshold above which stiction compensation should be
+  applied for the last 3 joints. (C++:
+  `stiction\_activations()`/`set\_stiction\_activations()`, Python:
+  `stiction\_activations`).
+
+### Dynamics Algorithms
+
+- `Cartesian Pose`: Compute the pose of the desired link (C++: 
+  `Eigen::Isometry3d CartesianPose(const Model& model, int link = -1)`, Python:
+  `cartesian\_pose(model: Model, link: int) -> numpy.ndarray`).
+- `Jacobian: Compute the basic Jacobian of the desired link (C++:
+  `Eigen::Matrix6Xd Jacobian(const Model& model, int link = -1)`, Python:
+  `jacobian(model: Model, link: int) -> numpy.ndarray`).
+- `Inertia`: Compute the joint space inertia matrix (C++:
+  `Eigen::MatrixXd Inertia(const Model& model)`, Python:
+  `inertia(model: Model) -> numpy.ndarray`).
+- `Centrifugal Coriolis`: Compute the joint space centrifugal/Coriolis forces
+  (C++: `Eigen::VectorXd CentrifugalCoriolis(const Model& model)`, Python:
+  `centrifugal_coriolis(model: Model) -> numpy.ndarray`).
+- `Gravity`: Compute the joint space gravity torque
+  (C++: `Eigen::VectorXd Gravity(const Model& model)`, Python:
+  `gravity(model: Model) -> numpy.ndarray`).
+- `Friction`: Compute the Franka Panda stiction compensation torques to be added
+  (by the user) to the input torques of the last 3 joints. Torques between
+  `stiction\_activations` and `stiction\_coefficients` will be clipped to
+  `stiction\_coefficients`. Torques below `stiction\_activations` smoothly decay
+  to 0. Torques above `stiction\_coefficients` are unaffected.
+  (C++: `Eigen::VectorXd Friction(const Model& model, Eigen::Ref<const Eigen::VectorXd> tau)`,
+  Python: `friction(model: Model, tau: numpy.ndarray) -> numpy.ndarray`).
+
+Eigen::VectorXd Gravity(const Model& model);
+
+Eigen::VectorXd Friction(const Model& model, Eigen::Ref<const Eigen::VectorXd> tau);
 
 Examples
 --------
