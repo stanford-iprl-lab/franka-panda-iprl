@@ -74,8 +74,10 @@ int main(int argc, char* argv[]) {
     redis_thread = std::thread(franka_driver::RedisThread, args, globals, model, state_init);
 
     // Run gripper thread
-    std::cout << "Starting gripper..." << std::endl;
-    gripper_thread = std::thread(franka_driver::GripperThread, args, globals);
+    if (args->use_gripper) {
+      std::cout << "Starting gripper..." << std::endl;
+      gripper_thread = std::thread(franka_driver::GripperThread, args, globals);
+    }
 
     // Run controller thread
     std::cout << "Starting control loop..." << std::endl;

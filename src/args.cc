@@ -106,6 +106,7 @@ Args ParseYaml(const char* filename) {
     args.key_gripper_status    = yaml["redis"]["keys"]["gripper_status"].as<std::string>();
 
     args.use_json              = yaml["redis"]["use_json"].as<bool>();
+    args.use_gripper           = yaml["redis"]["use_gripper"].as<bool>();
 
     // Load parameters
     args.load_mass = yaml["load"]["mass"].as<double>();
@@ -233,6 +234,7 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  key_gripper_max_width: " << args.key_gripper_max_width << std::endl
      << "  key_gripper_status: " << args.key_gripper_status << std::endl
      << "  use_json: " << args.use_json << std::endl
+     << "  use_gripper: " << args.use_gripper << std::endl
      << "  load_mass: " << args.load_mass << std::endl
      << "  load_com: " << args.load_com << std::endl
      << "  load_inertia: " << args.load_inertia << std::endl

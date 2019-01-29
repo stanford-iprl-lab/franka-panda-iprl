@@ -60,6 +60,7 @@ struct Args {
   std::string key_gripper_status    = "gripper::status";
 
   bool use_json = false;
+  bool use_gripper = true;
 
   // Load parameters
   double load_mass = 0.;
