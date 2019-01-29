@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     auto model = std::make_shared<franka::Model>(robot.loadModel());
 
     if (robot.readOnce().robot_mode != franka::RobotMode::kIdle) {
-      std::cerr << std::endl << "Make sure the robot isn't close to any joint limits and the e-stop is released." << std::endl;
+      std::cerr << std::endl << "Error connecting: Make sure the robot isn't close to any joint limits and the e-stop is released." << std::endl;
       g_runloop = false;
       return 0;
     }
@@ -70,12 +70,12 @@ int main(int argc, char* argv[]) {
     globals->runloop = &g_runloop;
 
     // Run Redis thread
-    std::cout << "Starting Redis..." << std::endl;
+    std::cout << "Starting Redis thread..." << std::endl;
     redis_thread = std::thread(franka_driver::RedisThread, args, globals, model, state_init);
 
     // Run gripper thread
     if (args->use_gripper) {
-      std::cout << "Starting gripper..." << std::endl;
+      std::cout << "Starting gripper thread..." << std::endl;
       gripper_thread = std::thread(franka_driver::GripperThread, args, globals);
     }
 
@@ -85,13 +85,16 @@ int main(int argc, char* argv[]) {
 
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
+    std::cout << "Stopped control loop." << std::endl;
     g_runloop = false;
   }
 
   if (redis_thread.joinable()) {
+    std::cout << "Waiting for Redis thread to terminate..." << std::endl;
     redis_thread.join();
   }
   if (gripper_thread.joinable()) {
+    std::cout << "Waiting for gripper thread to terminate..." << std::endl;
     gripper_thread.join();
   }
 

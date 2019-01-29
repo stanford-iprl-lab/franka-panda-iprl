@@ -42,7 +42,10 @@ void GripperThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMem
 
   try {
     // Connect to gripper
+    std::cout << "GripperThread(): Connecting to gripper at " << args.ip_robot << " (timeout 60s)..." << std::endl;
     franka::Gripper gripper(args.ip_robot);
+    std::cout << "GripperThread(): Gripper connected." << std::endl;
+
     franka::GripperState state = gripper.readOnce();
 
     // Initialize gripper status
@@ -112,6 +115,7 @@ void GripperThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMem
   redis_client.set(KEY_GRIPPER_MODE, GripperMode::IDLE);
   redis_client.set(KEY_GRIPPER_STATUS, GripperStatus::OFF);
   redis_client.sync_commit();
+  std::cout << "GripperThread(): Exiting..." << std::endl;
 }
 
 std::stringstream& operator<<(std::stringstream& ss, GripperMode mode) {

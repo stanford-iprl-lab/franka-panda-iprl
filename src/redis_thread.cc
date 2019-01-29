@@ -138,6 +138,7 @@ void RedisThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMemor
   redis_client.set(KEY_CONTROL_MODE, ControlMode::FLOATING);
   redis_client.set(KEY_DRIVER_STATUS, Status::OFF);
   redis_client.sync_commit();
+  std::cout << "RedisThread(): Exiting..." << std::endl;
 }
 
 std::stringstream& operator<<(std::stringstream& ss, Status status) {
