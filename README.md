@@ -99,11 +99,11 @@ The keys can be specified in the YAML configuration file (see `<franka-panda.git
 
 ### Robot control commands
 
-The control mode should be set ***after** the corresponding control command has already been set (e.g. set `tau = "0 0 0 0 0 0 0"` before `mode = torque`), or simultaneously with MSET. Otherwise, the robot may try to execute control with stale command values.
+The control mode should be set ***after*** the corresponding control command has already been set (e.g. set `tau = "0 0 0 0 0 0 0"` before `mode = torque`), or simultaneously with MSET. Otherwise, the robot may try to execute control with stale command values.
 
 - `franka_panda::control::tau`: Desired control torques used during torque control mode. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
-- `franka_panda::control::pose`: Desired transformation matrix from end-effector to world frame. \[4x4 array (e.g. `"1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1"`)\].
-- `franka_panda::control::mode`: Control mode. Note that the `cartesian_pose` controller is blocking and must reach the target pose before receiving the next command. \[One of {`"floating"`, `"torque"`, `"cartesian_pose"`}\].
+- `franka_panda::control::pose`: Desired transformation matrix from end-effector to world frame for `cartesian_pose` control, or desired delta pose for `delta_cartesian_pose` control. \[4x4 array (e.g. `"1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1"`)\].
+- `franka_panda::control::mode`: Control mode. Note that the `cartesian_pose` controllers are blocking and must reach the target pose before receiving the next command. The mode will be set to `idle` after these controllers have finished running. \[One of {`"idle"`, `"floating"`, `"torque"`, `"cartesian_pose"`, `"delta_cartesian_pose"`}\].
 
 ### Gripper control commands
 
