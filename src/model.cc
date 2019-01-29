@@ -14,6 +14,8 @@
 #include <cmath>      // std::abs
 #include <exception>  // std::invalid_argument
 
+#include <nlohmann/json.hpp>
+
 #include "libfcimodels.h"
 
 namespace franka_panda {
@@ -49,6 +51,18 @@ void Model::set_I_com_load_matrix(Eigen::Ref<const Eigen::Matrix3d> I_com) {
   Eigen::Matrix<double,6,1> I_com_flat;
   I_com_flat << I_com(0, 0), I_com(1, 1), I_com(2, 2), I_com(0, 1), I_com(0, 2), I_com(1, 2);
   set_I_com_load(I_com_flat);
+}
+
+void Model::set_load(const std::string& json_load) {
+  nlohmann::json load = nlohmann::json::parse(json_load);
+  double m = load["m"].get<double>();
+  std::array<double, 3> arr_com = load["com"].get<std::array<double, 3>>();
+  std::array<double, 6> arr_I_com = load["I_com"].get<std::array<double, 6>>();
+  Eigen::Map<Eigen::Vector3d> com(arr_com.data());
+  Eigen::Map<Eigen::Matrix<double,6,1>> I_com(arr_I_com.data());
+  set_m_load(m);
+  set_com_load(com);
+  set_I_com_load(I_com);
 }
 
 void Model::set_inertia_compensation(const Eigen::Vector3d& coeff) {

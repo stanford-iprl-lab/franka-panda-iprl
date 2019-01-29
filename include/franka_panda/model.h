@@ -39,6 +39,8 @@ class Model {
   const Eigen::Matrix3d& I_com_load_matrix() const { return I_com_load_; }
   void set_I_com_load_matrix(Eigen::Ref<const Eigen::Matrix3d> I_com);
 
+  void set_load(const std::string& json_load);
+
   const Eigen::Vector3d& g() const { return g_; }
 
   const Eigen::Vector3d& inertia_compensation() const { return inertia_compensation_; }

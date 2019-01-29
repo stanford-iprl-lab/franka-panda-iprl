@@ -109,6 +109,7 @@ target_link_libraries(${FRANKA_PANDA_LIB}
     PUBLIC
         Eigen3::Eigen
     PRIVATE
+        ctrl_utils::ctrl_utils
         ${FCI_MODELS_LIB}
 )
 
