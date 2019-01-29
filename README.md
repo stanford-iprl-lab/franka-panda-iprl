@@ -54,6 +54,8 @@ Driver Usage
    ```
    ./franka_redis_driver ../resources/default.yaml
    ```
+   
+5. Kill the driver with `<ctrl-c>`. This will reset Redis keys and terminate the driver threads gracefully. If the driver doesn't terminate, it may be stuck trying to connect to a non-existent gripper. To prevent this from happening, set `use_gripper` to `false` in the YAML configuration file.
 
 Franka Panda Dynamics Library
 -----------------------------
