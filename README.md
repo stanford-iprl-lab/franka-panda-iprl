@@ -106,17 +106,17 @@ already been set (e.g. set `tau = "0 0 0 0 0 0 0"` before `mode = torque`), or
 simultaneously with MSET. Otherwise, the robot may try to execute control with
 stale command values.
 
-- `franka\_panda::control::tau`: Desired control torques used during torque
+- `franka_panda::control::tau`: Desired control torques used during torque
   control mode. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
-- `franka\_panda::control::pose`: Desired transformation matrix from end-effector
-  to world frame for `cartesian\_pose` control, or desired delta pose for
-  `delta\_cartesian\_pose` control. \[4x4 array (e.g.
+- `franka_panda::control::pose`: Desired transformation matrix from end-effector
+  to world frame for `cartesian_pose` control, or desired delta pose for
+  `delta_cartesian_pose` control. \[4x4 array (e.g.
   `"1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1"`)\].
-- `franka\_panda::control::mode`: Control mode. Note that the `cartesian\_pose`
+- `franka_panda::control::mode`: Control mode. Note that the `cartesian_pose`
   controllers are blocking and must reach the target pose before receiving the
   next command. The mode will be set to `idle` after these controllers have
   finished running. \[One of {`"idle"`, `"floating"`, `"torque"`,
-  `"cartesian\_pose"`, `"delta\_cartesian\_pose"`}\].
+  `"cartesian_pose"`, `"delta_cartesian_pose"`}\].
 
 ### Gripper control commands
 
@@ -128,19 +128,19 @@ Both of these commands are blocking and must finish before receiving the next
 command.
 
 The `move` command takes in a `width` and `speed`. The `grasp` command takes in
-`width`, `speed`, `force`, and `grasp\_tol`.
+`width`, `speed`, `force`, and `grasp_tol`.
 
 The control mode should be set ***after*** the control parameters have already
 been set (e.g. set `width = 0` and `speed = 0.01` before `mode = move`), or
 simultaneously with MSET.
 
-- `franka\_panda::gripper::control::width`: Desired gripper width. \[Positive double\].
-- `franka\_panda::gripper::control::speed`: Max gripper speed \[Positive double\].
-- `franka\_panda::gripper::control::force`: Max gripper force (used only for
+- `franka_panda::gripper::control::width`: Desired gripper width. \[Positive double\].
+- `franka_panda::gripper::control::speed`: Max gripper speed \[Positive double\].
+- `franka_panda::gripper::control::force`: Max gripper force (used only for
   grasp c\ommand). \[Positive double\].
-- `franka\_panda::gripper::control::grasp\_tol`: Width tolerances to determine
+- `franka_panda::gripper::control::grasp_tol`: Width tolerances to determine
   whether object is grasped. \[Positive 2d array (e.g. `"0.05 0.05"`)\].
-- `franka\_panda::gripper::control::mode`: Gripper control mode. After a control
+- `franka_panda::gripper::control::mode`: Gripper control mode. After a control
   command has finished, the driver will reset the mode to `idle`. \[One of
   {`"idle"`, `"grasp"`, `"move"`}\].
 
@@ -148,40 +148,40 @@ simultaneously with MSET.
 
 These keys will be set by the driver in response to control commands.
 
-- `franka\_panda::driver::status`: If the driver turns `off` (either due to a
+- `franka_panda::driver::status`: If the driver turns `off` (either due to a
   robot error or user interrupt signal), the controller should ***stop***
   immediately. Restarting the driver with an old controller already running is
   dangerous. \[One of {`"running"`, `"off"`}\].
-- `franka\_panda::control::status`: If the cartesian pose controller
+- `franka_panda::control::status`: If the cartesian pose controller
   successfully reaches the target pose, the control status will be set to
   `finished`. This way the controller knows when to execute the next cartesian
   pose command. \[One of {`"running"`, `"finished"`, `"error"`}\].
-- `franka\_panda::gripper::status`: If the gripper is not running, the status
+- `franka_panda::gripper::status`: If the gripper is not running, the status
   will be `off`, and during a gripper command, it will be `grasping`. When a
   gripper command finishes, the `status` will be set to `grasped` if the object
-  has been classified as grasped or `not\_grasped` otherwise. \[One of {`"off"`,
-  `"grasping"`, `"grasped"`, `"not\_grasped"`}\].
+  has been classified as grasped or `not_grasped` otherwise. \[One of {`"off"`,
+  `"grasping"`, `"grasped"`, `"not_grasped"`}\].
 
 ### Robot sensor values
 
 These keys will be set by the driver at 1000Hz.
 
-- `franka\_panda::sensor::q`: Joint configuration. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
-- `franka\_panda::sensor::dq`: Joint velocity. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
-- `franka\_panda::sensor::tau`: Joint torques. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
-- `franka\_panda::sensor::dtau`: Joint torque derivatives. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
-- `franka\_panda::gripper::sensor::width`: Gripper width. \[Positive double\].
+- `franka_panda::sensor::q`: Joint configuration. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
+- `franka_panda::sensor::dq`: Joint velocity. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
+- `franka_panda::sensor::tau`: Joint torques. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
+- `franka_panda::sensor::dtau`: Joint torque derivatives. \[7d array (e.g. `"0 0 0 0 0 0 0"`)\].
+- `franka_panda::gripper::sensor::width`: Gripper width. \[Positive double\].
 
 ### Robot model
 
 These keys will be set by the driver once at the start.
 
-- `franka\_panda::model::inertia\_ee`: Inertia of the attached end-effector.
+- `franka_panda::model::inertia_ee`: Inertia of the attached end-effector.
   This should be attached as a load to the end-effector when computing dynamics
   quantities with the Franka Panda Dynamics Library. \[JSON {m: <mass: double>,
   com: <center of mass: array[double[3]]>, I_com: <inertia at com:
   array[double[6]]>}\].
-- `franka\_panda::gripper::model::max\_width`: Max width of the gripper computed
+- `franka_panda::gripper::model::max_width`: Max width of the gripper computed
   via homing. \[Positive double\].
 
 Dynamics Library API Quick Reference
@@ -189,36 +189,36 @@ Dynamics Library API Quick Reference
 
 ### Model Class
 
-C++: `franka\_panda::Model`, Python: `frankapanda.Model`
+C++: `franka_panda::Model`, Python: `frankapanda.Model`
 
 - `dof`: Degrees of freedom (C++: `dof()`, Python: `dof`).
-- `q`: Joint position (C++: `q()`/`set\_q()`, Python: `q`).
-- `dq`: Joint position (C++: `dq()`/`set\_dq()`, Python: `dq`).
-- `m\_load`: Load mass (C++: `m\_load()`/`set\_m\_load()`, Python: `m\_load`).
-- `com\_load`: Load center of mass (C++: `com\_load()`/`set\_com\_load()`, Python: `com\_load`).
-- `I\_com\_load`: Load inertia as a vector [Ixx Iyy Izz Ixy Ixz Iyz] (C++:
-  `I\_com\_load()`/`set\_I\_com\_load()`, Python: `I\_com\_load`).
-- `I\_com\_load\_matrix`: Load inertia as a 3x3 matrix (C++:
-  `I\_com\_load\_matrix()`/`set\_I\_com\_load\_matrix()`, Python: `I\_com\_load\_matrix`).
-- `set\_load()`: Parse the load json string output by the driver.
+- `q`: Joint position (C++: `q()`/`set_q()`, Python: `q`).
+- `dq`: Joint position (C++: `dq()`/`set_dq()`, Python: `dq`).
+- `m_load`: Load mass (C++: `m_load()`/`set_m_load()`, Python: `m_load`).
+- `com_load`: Load center of mass (C++: `com_load()`/`set_com_load()`, Python: `com_load`).
+- `I_com_load`: Load inertia as a vector [Ixx Iyy Izz Ixy Ixz Iyz] (C++:
+  `I_com_load()`/`set_I_com_load()`, Python: `I_com_load`).
+- `I_com_load_matrix`: Load inertia as a 3x3 matrix (C++:
+  `I_com_load_matrix()`/`set_I_com_load_matrix()`, Python: `I_com_load_matrix`).
+- `set_load()`: Parse the load json string output by the driver.
 - `g`: Gravity vector (C++: `g()`, Python: `g`)
-- `inertia\_compensation`: Terms added to the last 3 diagonal terms of the joint
+- `inertia_compensation`: Terms added to the last 3 diagonal terms of the joint
   space inertia matrix (C++:
-  `inertia\_compensation()`/`set\_inertia\_compensation()`, Python:
-  `inertia\_compensation`).
-- `stiction\_coefficients`: Stiction coefficients for the last 3 joints. (C++:
-  `stiction\_coefficients()`/`set\_stiction\_coefficients()`, Python:
-  `stiction\_coefficients`).
-- `stiction\_activations`: Threshold above which stiction compensation should be
+  `inertia_compensation()`/`set_inertia_compensation()`, Python:
+  `inertia_compensation`).
+- `stiction_coefficients`: Stiction coefficients for the last 3 joints. (C++:
+  `stiction_coefficients()`/`set_stiction_coefficients()`, Python:
+  `stiction_coefficients`).
+- `stiction_activations`: Threshold above which stiction compensation should be
   applied for the last 3 joints. (C++:
-  `stiction\_activations()`/`set\_stiction\_activations()`, Python:
-  `stiction\_activations`).
+  `stiction_activations()`/`set_stiction_activations()`, Python:
+  `stiction_activations`).
 
 ### Dynamics Algorithms
 
 - `Cartesian Pose`: Compute the pose of the desired link (C++: 
   `Eigen::Isometry3d CartesianPose(const Model& model, int link = -1)`, Python:
-  `cartesian\_pose(model: Model, link: int) -> numpy.ndarray`).
+  `cartesian_pose(model: Model, link: int) -> numpy.ndarray`).
 - `Jacobian: Compute the basic Jacobian of the desired link (C++:
   `Eigen::Matrix6Xd Jacobian(const Model& model, int link = -1)`, Python:
   `jacobian(model: Model, link: int) -> numpy.ndarray`).
@@ -233,15 +233,11 @@ C++: `franka\_panda::Model`, Python: `frankapanda.Model`
   `gravity(model: Model) -> numpy.ndarray`).
 - `Friction`: Compute the Franka Panda stiction compensation torques to be added
   (by the user) to the input torques of the last 3 joints. Torques between
-  `stiction\_activations` and `stiction\_coefficients` will be clipped to
-  `stiction\_coefficients`. Torques below `stiction\_activations` smoothly decay
-  to 0. Torques above `stiction\_coefficients` are unaffected.
+  `stiction_activations` and `stiction_coefficients` will be clipped to
+  `stiction_coefficients`. Torques below `stiction_activations` smoothly decay
+  to 0. Torques above `stiction_coefficients` are unaffected.
   (C++: `Eigen::VectorXd Friction(const Model& model, Eigen::Ref<const Eigen::VectorXd> tau)`,
   Python: `friction(model: Model, tau: numpy.ndarray) -> numpy.ndarray`).
-
-Eigen::VectorXd Gravity(const Model& model);
-
-Eigen::VectorXd Friction(const Model& model, Eigen::Ref<const Eigen::VectorXd> tau);
 
 Examples
 --------
@@ -249,7 +245,7 @@ Examples
 To run the example control apps, you will need to perform the following
 additional steps.
 
-1. Download and compile `spatial\_dyn`.
+1. Download and compile `spatial_dyn`.
 2. Rebuild the driver (step 3 in the **Install** section above).
 
 The apps are provided in both C++ and Python:
@@ -285,7 +281,7 @@ The apps are provided in both C++ and Python:
    ```
 
 2. Locally install the `spatialdyn` module (look in
-   `~/.cmake/packages/spatial\_dyn` for a hint of where it's located):
+   `~/.cmake/packages/spatial_dyn` for a hint of where it's located):
 
    ```
    cd <spatial-dyn.git>
