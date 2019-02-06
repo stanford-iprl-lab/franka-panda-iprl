@@ -54,14 +54,15 @@ KEY_KP_KV_POS   = KEY_PREFIX + "control::kp_kv_pos"
 KEY_KP_KV_ORI   = KEY_PREFIX + "control::kp_kv_ori"
 KEY_KP_KV_JOINT = KEY_PREFIX + "control::kp_kv_joint"
 
-EE_OFFSET       = np.array([0., 0., 0.107])
-Q_HOME          = np.array([0., -np.pi/6., 0., -5./6. * np.pi, 0., 2./3. * np.pi, 0.])
-KP_KV_POS       = np.array([40., 5.])
-KP_KV_ORI       = np.array([40., 5.])
-KP_KV_JOINT     = np.array([5., 0.])
-TIMER_FREQ      = 1000.
-GAIN_KEY_PRESS  = 0.1 / TIMER_FREQ
-GAIN_CLICK_DRAG = 100.
+EE_OFFSET          = np.array([0., 0., 0.107])
+Q_HOME             = np.array([0., -np.pi/6., 0., -5./6. * np.pi, 0., 2./3. * np.pi, 0.])
+KP_KV_POS          = np.array([40., 5.])
+KP_KV_ORI          = np.array([40., 5.])
+KP_KV_JOINT        = np.array([5., 0.])
+TIMER_FREQ         = 1000.
+GAIN_KEY_PRESS_POS = 0.1 / TIMER_FREQ
+GAIN_KEY_PRESS_ORI = 0.3 / TIMER_FREQ
+GAIN_CLICK_DRAG    = 100.
 
 def pd_control(x, x_des, dx, kp_kv):
     if type(x) is eigen.Quaterniond:
@@ -196,6 +197,7 @@ def main():
 
             # Parse interaction from web app
             adjust_position(interaction["key_down"], x_des)
+            adjust_orientation(interaction["key_down"], quat_des)
 
             # Send control torques
             redis_client.set(KEY_CONTROL_TAU, encode_matlab(tau_cmd))
@@ -311,9 +313,9 @@ def adjust_position(key, pos):
     else:
         return
 
-    pos[idx] += sign * GAIN_KEY_PRESS
+    pos[idx] += sign * GAIN_KEY_PRESS_POS
 
-def adjust_orientation(key, ori):
+def adjust_orientation(key, quat):
     if not key:
         return
 
@@ -341,7 +343,9 @@ def adjust_orientation(key, ori):
         return
 
     axis = np.zeros((3,))
-    axis[idx] = sign
+    axis[idx] = 1
+    aa = eigen.AngleAxisd(sign * GAIN_KEY_PRESS_ORI, axis)
+    quat.set(spatialdyn.opspace.near_quaternion((aa * quat).normalized(), quat))
 
 if __name__ == "__main__":
     main()
