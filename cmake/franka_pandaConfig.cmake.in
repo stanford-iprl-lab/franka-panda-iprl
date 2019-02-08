@@ -7,13 +7,13 @@
 # Authors: Toki Migimatsu
 ############################################################
 
-get_filename_component(SPATIAL_DYN_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(FRANKA_PANDA_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
-list(APPEND CMAKE_MODULE_PATH ${SPATIAL_DYN_CMAKE_DIR})
+list(APPEND CMAKE_MODULE_PATH ${FRANKA_PANDA_CMAKE_DIR})
 find_dependency(Eigen3 3.3.5 REQUIRED)
 list(REMOVE_AT CMAKE_MODULE_PATH -1)
 
 if(NOT TARGET franka_panda::franka_panda)
-    include("${SPATIAL_DYN_CMAKE_DIR}/franka_pandaTargets.cmake")
+    include("${FRANKA_PANDA_CMAKE_DIR}/franka_pandaTargets.cmake")
 endif()
