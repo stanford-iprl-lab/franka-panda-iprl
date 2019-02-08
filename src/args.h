@@ -54,6 +54,7 @@ struct Args {
   std::string key_inertia_ee        = "model::inertia_ee";
   std::string key_driver_status     = "driver::status";
   std::string key_control_status    = "control::status";
+  std::string key_robot_timer       = "timestamp::robot";
 
   std::string key_gripper_width     = "gripper::sensor::width";
   std::string key_gripper_max_width = "gripper::model::max_width";

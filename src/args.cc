@@ -100,6 +100,8 @@ Args ParseYaml(const char* filename) {
     args.key_inertia_ee        = yaml["redis"]["keys"]["inertia_ee"].as<std::string>();
     args.key_driver_status     = yaml["redis"]["keys"]["driver_status"].as<std::string>();
     args.key_control_status    = yaml["redis"]["keys"]["control_status"].as<std::string>();
+    args.key_robot_timer       = yaml["redis"]["keys"]["timer"].as<std::string>();
+
 
     args.key_gripper_width     = yaml["redis"]["keys"]["gripper_width"].as<std::string>();
     args.key_gripper_max_width = yaml["redis"]["keys"]["gripper_max_width"].as<std::string>();
@@ -123,6 +125,7 @@ Args ParseYaml(const char* filename) {
     args.load_inertia[6] = yaml["load"]["inertia"]["xz"].as<double>();
     args.load_inertia[7] = yaml["load"]["inertia"]["yz"].as<double>();
     args.load_inertia[8] = yaml["load"]["inertia"]["zz"].as<double>();
+
 
     // Control parameters
     args.limit_rate          = yaml["control"]["limit_rate"].as<bool>();
@@ -231,6 +234,7 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  key_inertia_ee: " << args.key_inertia_ee << std::endl
      << "  key_driver_status: " << args.key_driver_status << std::endl
      << "  key_control_status: " << args.key_control_status << std::endl
+     << "  key_robot_timer: " << args.key_robot_timer <<std::endl
      << "  key_gripper_width: " << args.key_gripper_width << std::endl
      << "  key_gripper_max_width: " << args.key_gripper_max_width << std::endl
      << "  key_gripper_status: " << args.key_gripper_status << std::endl

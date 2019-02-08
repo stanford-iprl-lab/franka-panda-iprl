@@ -27,6 +27,7 @@ struct SharedMemory {
   std::atomic<std::array<double, 7>> dq   = {{{0.}}};
   std::atomic<std::array<double, 7>> tau  = {{{0.}}};
   std::atomic<std::array<double, 7>> dtau = {{{0.}}};
+  std::atomic<std::uint64_t> time = 0; 
 
   // std::atomic<double> m_load                    = {0.};
   // std::atomic<std::array<double, 3>> com_load   = {{{0.}}};

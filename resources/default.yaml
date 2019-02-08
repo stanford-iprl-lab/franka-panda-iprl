@@ -54,6 +54,7 @@ redis:
     inertia_ee:        "model::inertia_ee"
     driver_status:     "driver::status"
     control_status:    "control::status"
+    timer:             "timestamp::robot"
 
     gripper_width:     "gripper::sensor::width"
     gripper_max_width: "gripper::model::max_width"

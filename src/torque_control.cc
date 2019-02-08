@@ -32,6 +32,7 @@ CreateTorqueController(const Args& args, const std::shared_ptr<SharedMemory>& gl
     globals->dq       = state.dq;
     globals->tau      = state.tau_J;
     globals->dtau     = state.dtau_J;
+    globals->time    += dt.toMSec(); 
 
     // Get control mode
     ControlMode control_mode = globals->control_mode;

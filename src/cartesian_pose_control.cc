@@ -315,7 +315,7 @@ CreateCartesianPoseController(const Args& args, const std::shared_ptr<SharedMemo
     globals->dq   = state.dq;
     globals->tau  = state.tau_J;
     globals->dtau = state.dtau_J;
-
+    globals->time += dt.toMSec(); 
     // Get command torques
     if (globals->control_mode != ControlMode::CARTESIAN_POSE) {
       throw SwitchControllerException("cartesian_pose");
