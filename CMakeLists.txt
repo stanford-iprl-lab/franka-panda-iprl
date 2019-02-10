@@ -31,7 +31,7 @@ set(FRANKA_PANDA_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(FRANKA_PANDA_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 
 # Create Franka Panda driver
-add_executable(${FRANKA_PANDA_BIN})
+add_executable(${FRANKA_PANDA_BIN} "")
 
 # Set compiler options
 target_compile_options(${FRANKA_PANDA_BIN} PRIVATE
