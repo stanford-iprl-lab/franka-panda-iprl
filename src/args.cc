@@ -129,6 +129,7 @@ Args ParseYaml(const char* filename) {
     args.lowpass_freq_cutoff = yaml["control"]["lowpass_freq_cutoff"].as<double>();
 
     args.compensate_gravity  = yaml["control"]["torque_controller"]["compensate_gravity"].as<bool>();
+    args.tau_command_timeout = franka::Duration(yaml["control"]["torque_controller"]["tau_command_timeout"].as<uint64_t>());
 
     args.K_joint             = yaml["control"]["joint_space_controller"]["K_joint"].as<std::array<double, 7>>();
 
@@ -146,7 +147,7 @@ Args ParseYaml(const char* filename) {
     args.f_collision_thresholds       = ParseArray<6>(yaml["control"]["collision_thresholds"]["f_collision"]);
 
   } catch (...) {
-    throw std::runtime_error("franka_panda::ParseYaml(): Unable to parse YAML config.");
+    throw std::runtime_error("franka_panda::ParseYaml(): Unable to parse YAML config. Check to see if all the required fields exist.");
   }
   return args;
 }
@@ -241,6 +242,7 @@ std::ostream& operator<<(std::ostream& os, const Args& args) {
      << "  limit_rate: " << args.limit_rate << std::endl
      << "  lowpass_freq_cutoff: " << args.lowpass_freq_cutoff << std::endl
      << "  compensate_gravity: " << args.compensate_gravity << std::endl
+     << "  tau_command_timeout: " << args.tau_command_timeout.toMSec() << std::endl
      << "  K_joint: " << args.K_joint << std::endl
      << "  K_cart: " << args.K_cart << std::endl
      << "  T_ee_to_flange: " << args.T_ee_to_flange << std::endl

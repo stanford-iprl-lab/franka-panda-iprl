@@ -102,6 +102,9 @@ control:
     # Compensate for gravity
     compensate_gravity: false
 
+    # Timeout for torque command updates [ms]
+    tau_command_timeout: 100
+
   # Joint space controller parameters
   joint_space_controller:
 

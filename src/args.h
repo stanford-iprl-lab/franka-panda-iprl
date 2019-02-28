@@ -73,6 +73,7 @@ struct Args {
 
   // Torque control parameters
   bool compensate_gravity = true;
+  franka::Duration tau_command_timeout = franka::Duration(100);  // [ms]
 
   // Joint space control parameters
   std::array<double, 7> K_joint = {{3000., 3000., 3000., 2500., 2500., 2000., 2000.}};
