@@ -81,6 +81,12 @@ const double kTimerFreq          = 1000.;
 const double kGainKeyPressPos    = 0.1 / kTimerFreq;
 const double kGainKeyPressOri    = 0.3 / kTimerFreq;
 const double kGainClickDrag      = 100.;
+const double kMaxErrorPos        = 0.05;
+const double kMaxErrorOri        = M_PI / 2;
+const double kEpsilonPos         = 0.01;
+const double kEpsilonOri         = 0.05;
+const double kEpsilonVelPos      = 0.001;
+const double kEpsilonVelOri      = 0.005;
 
 const spatial_dyn::opspace::InverseDynamicsOptions kOpspaceOptions = []() {
   spatial_dyn::opspace::InverseDynamicsOptions options;
@@ -100,11 +106,15 @@ typename Derived1::PlainObject PdControl(const Eigen::MatrixBase<Derived1>& x,
                                          const Eigen::MatrixBase<Derived2>& x_des,
                                          const Eigen::MatrixBase<Derived3>& dx,
                                          const Eigen::Vector2d& kp_kv,
+                                         double x_err_max = 0.,
                                          typename Derived1::PlainObject* p_x_err = nullptr) {
   typename Derived1::PlainObject x_err;
   x_err = x - x_des;
   if (p_x_err != nullptr) {
     *p_x_err = x_err;
+  }
+  if (x_err_max > 0. && x_err.norm() > x_err_max) {
+    x_err = x_err_max * x_err.normalized();
   }
   return -kp_kv(0) * x_err - kp_kv(1) * dx;
 }
@@ -114,10 +124,14 @@ Eigen::Vector3d PdControl(const Eigen::Quaterniond& quat,
                           const Eigen::Quaterniond& quat_des,
                           Eigen::Ref<const Eigen::Vector3d> w,
                           const Eigen::Vector2d& kp_kv,
+                          double ori_err_max = 0.,
                           Eigen::Vector3d* p_ori_err = nullptr) {
   Eigen::Vector3d ori_err = spatial_dyn::opspace::OrientationError(quat, quat_des);
   if (p_ori_err != nullptr) {
     *p_ori_err = ori_err;
+  }
+  if (ori_err_max > 0. && ori_err.norm() > ori_err_max) {
+    ori_err = ori_err_max * ori_err.normalized();
   }
   return -kp_kv(0) * ori_err - kp_kv(1) * w;
 }
@@ -181,14 +195,15 @@ int main(int argc, char* argv[]) {
 
   Eigen::Vector3d x_des_pub       = spatial_dyn::Position(ab, -1, kEeOffset);
   Eigen::Quaterniond quat_des_pub = spatial_dyn::Orientation(ab);
-  std::atomic<double> epsilon_pos = { 1e-2 };
-  std::atomic<double> epsilon_ori = { 1e-2 };
+  std::atomic<double> epsilon_pos = { kEpsilonPos };
+  std::atomic<double> epsilon_ori = { kEpsilonOri };
   bool is_pub_available = false;
   bool is_pub_waiting = false;
   std::mutex mtx_pub;
   redis_sub.subscribe(KEY_PUB_COMMAND,
       [&mtx_des, &x_des, &quat_des, &mtx_pub, &x_des_pub, &quat_des_pub, &epsilon_pos,
        &epsilon_ori, &is_pub_available](const std::string& key, const std::string& val) {
+    std::cout << key << ": " << val << std::endl;
     try {
       // Get current des pose
       mtx_des.lock();
@@ -205,6 +220,8 @@ int main(int argc, char* argv[]) {
         }
         if (json_cmd.find("quat") != json_cmd.end()) {
           quat.coeffs() = json_cmd["quat"].get<Eigen::Vector4d>();
+        } else if (json_cmd.find("rot") != json_cmd.end()) {
+          quat = json_cmd["rot"].get<Eigen::Matrix3d>();
         }
       } else if (type == "delta_pose") {
         if (json_cmd.find("pos") != json_cmd.end()) {
@@ -213,6 +230,10 @@ int main(int argc, char* argv[]) {
         if (json_cmd.find("quat") != json_cmd.end()) {
           Eigen::Quaterniond quat_delta;
           quat_delta.coeffs() = json_cmd["quat"].get<Eigen::Vector4d>();
+          quat = quat * quat_delta;
+        } else if (json_cmd.find("rot") != json_cmd.end()) {
+          Eigen::Quaterniond quat_delta;
+          quat_delta = json_cmd["rot"].get<Eigen::Matrix3d>();
           quat = quat * quat_delta;
         }
       }
@@ -233,6 +254,7 @@ int main(int argc, char* argv[]) {
       std::cerr << "cpp_redis::subscribe_callback(" << key << ", " << val << "): " << std::endl << e.what() << std::endl;
     }
   });
+  redis_sub.commit();
 
   // Get end-effector model from driver
   try {
@@ -283,9 +305,9 @@ int main(int argc, char* argv[]) {
         quat_des = quat_des_pub;
         mtx_des.unlock();
         is_pub_available = false;
+        is_pub_waiting = true;
       }
       mtx_pub.unlock();
-      is_pub_waiting = true;
 
       // Compute Jacobian
       const Eigen::Matrix6Xd& J = spatial_dyn::Jacobian(ab, -1, kEeOffset);
@@ -294,13 +316,13 @@ int main(int argc, char* argv[]) {
       Eigen::Vector3d x_err;
       Eigen::Vector3d x   = spatial_dyn::Position(ab, -1, kEeOffset);
       Eigen::Vector3d dx  = J.topRows<3>() * ab.dq();
-      Eigen::Vector3d ddx = PdControl(x, x_des, dx, fut_kp_kv_pos.get(), &x_err);
+      Eigen::Vector3d ddx = PdControl(x, x_des, dx, fut_kp_kv_pos.get(), kMaxErrorPos, &x_err);
 
       // Compute orientation PD control
       Eigen::Vector3d ori_err;
       Eigen::Quaterniond quat = spatial_dyn::opspace::NearQuaternion(spatial_dyn::Orientation(ab), quat_des);
       Eigen::Vector3d w       = J.bottomRows<3>() * ab.dq();
-      Eigen::Vector3d dw      = PdControl(quat, quat_des, w, fut_kp_kv_ori.get(), &ori_err);
+      Eigen::Vector3d dw      = PdControl(quat, quat_des, w, fut_kp_kv_ori.get(), kMaxErrorOri, &ori_err);
 
       // Compute opspace torques
       Eigen::MatrixXd N;
@@ -351,7 +373,9 @@ int main(int argc, char* argv[]) {
       }
 
       // Send PUB command status
-      if (is_pub_waiting && x_err.norm() < epsilon_pos.load() && ori_err.norm() < epsilon_ori.load()) {
+      if (is_pub_waiting &&
+          x_err.norm() < epsilon_pos.load() && dx.norm() < kEpsilonVelPos &&
+          ori_err.norm() < epsilon_ori.load() && w.norm() < kEpsilonVelOri) {
         redis_client.publish(KEY_PUB_STATUS, "done");
         is_pub_waiting = false;
       }
