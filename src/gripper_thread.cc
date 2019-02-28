@@ -85,26 +85,39 @@ void GripperThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMem
       switch (mode) {
         case GripperMode::GRASP:
           redis_client.sync_set(KEY_GRIPPER_STATUS, GripperStatus::GRASPING);
+
+          // Perform blocking grasp
           grasped = gripper.grasp(width, speed, force, grasp_tol.inner, grasp_tol.outer);
           status = grasped ? GripperStatus::GRASPED : GripperStatus::NOT_GRASPED;
+          state = gripper.readOnce();
+
+          // Publish grasping results
+          redis_client.set(KEY_GRIPPER_WIDTH, state.width);
           redis_client.mset(std::make_pair(KEY_GRIPPER_MODE, GripperMode::IDLE),
                             std::make_pair(KEY_GRIPPER_STATUS, status));
+          redis_client.sync_commit();
+          redis_client.sync_publish(KEY_GRIPPER_MODE, GripperMode::IDLE);
           break;
         case GripperMode::MOVE:
           redis_client.sync_set(KEY_GRIPPER_STATUS, GripperStatus::GRASPING);
+
+          // Perform blocking grasp
           grasped = gripper.move(width, speed);
           status = grasped ? GripperStatus::GRASPED : GripperStatus::NOT_GRASPED;
+          state = gripper.readOnce();
+
+          // Publish grasping results
+          redis_client.set(KEY_GRIPPER_WIDTH, state.width);
           redis_client.mset(std::make_pair(KEY_GRIPPER_MODE, GripperMode::IDLE),
-                            std::make_pair(KEY_GRIPPER_STATUS, status));
+                                 std::make_pair(KEY_GRIPPER_STATUS, status));
+          redis_client.sync_commit();
+          redis_client.sync_publish(KEY_GRIPPER_MODE, GripperMode::IDLE);
           break;
         default:
+          state = gripper.readOnce();
+          redis_client.sync_set(KEY_GRIPPER_WIDTH, state.width);
           break;
       }
-
-      // Get the gripper state
-      state = gripper.readOnce();
-      redis_client.set(KEY_GRIPPER_WIDTH, state.width);
-      redis_client.sync_commit();
     }
   } catch (const franka::NetworkException& e) {
     std::cerr << "Unable to connect to gripper at " << args.ip_robot << "." << std::endl;

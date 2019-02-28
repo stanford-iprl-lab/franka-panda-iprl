@@ -8,11 +8,13 @@
  * Authors: Toki Migimatsu
  */
 
+#include <atomic>     // std::atomic
 #include <cmath>      // std::sin, std::cos
 #include <csignal>    // std::signal, std::sig_atomic_t
 #include <exception>  // std::exception
 #include <future>     // std::future
 #include <iostream>   // std::cout
+#include <mutex>      // std::mutex
 #include <string>     // std::string
 
 #include <spatial_dyn/spatial_dyn.h>
@@ -30,9 +32,10 @@ void stop(int) {
 }
 
 // Redis keys
-const std::string KEY_PREFIX        = "franka_panda::";
+const std::string KEY_PREFIX         = "franka_panda::";
 const std::string KEY_MODELS_PREFIX  = KEY_PREFIX + "model::";
 const std::string KEY_OBJECTS_PREFIX = KEY_PREFIX + "object::";
+const std::string KEY_TRAJ_PREFIX    = KEY_PREFIX + "trajectory::";
 
 // GET keys
 const std::string KEY_SENSOR_Q      = KEY_PREFIX + "sensor::q";
@@ -41,19 +44,26 @@ const std::string KEY_MODEL_EE      = KEY_PREFIX + "model::inertia_ee";
 const std::string KEY_DRIVER_STATUS = KEY_PREFIX + "driver::status";
 
 // SET keys
-const std::string KEY_CONTROL_TAU   = KEY_PREFIX + "control::tau";
-const std::string KEY_CONTROL_MODE  = KEY_PREFIX + "control::mode";
-const std::string KEY_CONTROL_POS   = KEY_PREFIX + "control::pos";
-const std::string KEY_TRAJ_POS      = KEY_PREFIX + "trajectory::pos";
-const std::string KEY_TRAJ_ORI      = KEY_PREFIX + "trajectory::ori";
-const std::string KEY_TRAJ_POS_ERR  = KEY_PREFIX + "trajectory::pos_err";
-const std::string KEY_TRAJ_ORI_ERR  = KEY_PREFIX + "trajectory::ori_err";
-const std::string KEY_MODEL         = KEY_PREFIX + "model";
+const std::string KEY_CONTROL_TAU     = KEY_PREFIX + "control::tau";
+const std::string KEY_CONTROL_MODE    = KEY_PREFIX + "control::mode";
+const std::string KEY_CONTROL_POS_DES = KEY_PREFIX + "control::pos_des";
+const std::string KEY_CONTROL_ORI_DES = KEY_PREFIX + "control::ori_des";
+const std::string KEY_CONTROL_POS     = KEY_PREFIX + "control::pos";
+const std::string KEY_CONTROL_ORI     = KEY_PREFIX + "control::ori";
+const std::string KEY_CONTROL_POS_ERR = KEY_PREFIX + "control::pos_err";
+const std::string KEY_CONTROL_ORI_ERR = KEY_PREFIX + "control::ori_err";
+const std::string KEY_TRAJ_POS        = KEY_TRAJ_PREFIX + "pos";
 
 const std::string kNameApp            = "simulator";
 const std::string KEY_WEB_RESOURCES   = "webapp::resources";
 const std::string KEY_WEB_ARGS        = "webapp::" + kNameApp + "::args";
 const std::string KEY_WEB_INTERACTION = "webapp::" + kNameApp + "::interaction";
+
+// SUB keys
+const std::string KEY_PUB_COMMAND = KEY_PREFIX + "control::pub::command";
+
+// PUB keys
+const std::string KEY_PUB_STATUS = KEY_PREFIX + "control::pub::status";
 
 // Controller gains
 const std::string KEY_KP_KV_POS   = KEY_PREFIX + "control::kp_kv_pos";
@@ -136,6 +146,8 @@ int main(int argc, char* argv[]) {
   ctrl_utils::Timer timer(kTimerFreq);
   ctrl_utils::RedisClient redis_client;
   redis_client.connect();
+  cpp_redis::subscriber redis_sub;
+  redis_sub.connect();
 
   // Load robot
   franka_panda::ArticulatedBody ab = spatial_dyn::urdf::LoadModel(argv[1]);
@@ -154,6 +166,7 @@ int main(int argc, char* argv[]) {
   Eigen::VectorXd q_des       = kQHome;
   Eigen::Vector3d x_des       = spatial_dyn::Position(ab, -1, kEeOffset);
   Eigen::Quaterniond quat_des = spatial_dyn::Orientation(ab);
+  std::mutex mtx_des;
 
   // Initialize Redis keys
   InitializeWebApp(redis_client, ab, std::string(argv[1]));
@@ -165,6 +178,61 @@ int main(int argc, char* argv[]) {
   redis_client.set(KEY_KP_KV_ORI, kKpKvOri);
   redis_client.set(KEY_KP_KV_JOINT, kKpKvJoint);
   redis_client.sync_commit();
+
+  Eigen::Vector3d x_des_pub       = spatial_dyn::Position(ab, -1, kEeOffset);
+  Eigen::Quaterniond quat_des_pub = spatial_dyn::Orientation(ab);
+  std::atomic<double> epsilon_pos = { 1e-2 };
+  std::atomic<double> epsilon_ori = { 1e-2 };
+  bool is_pub_available = false;
+  bool is_pub_waiting = false;
+  std::mutex mtx_pub;
+  redis_sub.subscribe(KEY_PUB_COMMAND,
+      [&mtx_des, &x_des, &quat_des, &mtx_pub, &x_des_pub, &quat_des_pub, &epsilon_pos,
+       &epsilon_ori, &is_pub_available](const std::string& key, const std::string& val) {
+    try {
+      // Get current des pose
+      mtx_des.lock();
+      Eigen::Vector3d x = x_des;
+      Eigen::Quaterniond quat = quat_des;
+      mtx_des.unlock();
+
+      // Parse json command
+      nlohmann::json json_cmd = nlohmann::json::parse(val);
+      std::string type = json_cmd["type"].get<std::string>();
+      if (type == "pose") {
+        if (json_cmd.find("pos") != json_cmd.end()) {
+          x = json_cmd["pos"].get<Eigen::Vector3d>();
+        }
+        if (json_cmd.find("quat") != json_cmd.end()) {
+          quat.coeffs() = json_cmd["quat"].get<Eigen::Vector4d>();
+        }
+      } else if (type == "delta_pose") {
+        if (json_cmd.find("pos") != json_cmd.end()) {
+          x += json_cmd["pos"].get<Eigen::Vector3d>();
+        }
+        if (json_cmd.find("quat") != json_cmd.end()) {
+          Eigen::Quaterniond quat_delta;
+          quat_delta.coeffs() = json_cmd["quat"].get<Eigen::Vector4d>();
+          quat = quat * quat_delta;
+        }
+      }
+      if (json_cmd.find("pos_tolerance") != json_cmd.end()) {
+        epsilon_pos = json_cmd["pos_tolerance"].get<double>();
+      }
+      if (json_cmd.find("ori_tolerance") != json_cmd.end()) {
+        epsilon_ori = json_cmd["ori_tolerance"].get<double>();
+      }
+
+      // Set pub des pose
+      mtx_pub.lock();
+      x_des_pub = x;
+      quat_des_pub = quat;
+      is_pub_available = true;
+      mtx_pub.unlock();
+    } catch (const std::exception& e) {
+      std::cerr << "cpp_redis::subscribe_callback(" << key << ", " << val << "): " << std::endl << e.what() << std::endl;
+    }
+  });
 
   // Get end-effector model from driver
   try {
@@ -206,6 +274,18 @@ int main(int argc, char* argv[]) {
       } else {
         redis_client.commit();
       }
+
+      // Check for PUB commands
+      mtx_pub.lock();
+      if (is_pub_available) {
+        mtx_des.lock();
+        x_des    = x_des_pub;
+        quat_des = quat_des_pub;
+        mtx_des.unlock();
+        is_pub_available = false;
+      }
+      mtx_pub.unlock();
+      is_pub_waiting = true;
 
       // Compute Jacobian
       const Eigen::Matrix6Xd& J = spatial_dyn::Jacobian(ab, -1, kEeOffset);
@@ -249,8 +329,10 @@ int main(int argc, char* argv[]) {
       // Parse interaction from web app
       nlohmann::json interaction = fut_interaction.get();
       std::string key_down = interaction["key_down"].get<std::string>();
+      mtx_des.lock();
       AdjustPosition(key_down, &x_des);
       AdjustOrientation(key_down, &quat_des);
+      mtx_des.unlock();
 
       // Send control torques
       redis_client.sync_set(KEY_CONTROL_TAU, tau_cmd);
@@ -268,12 +350,20 @@ int main(int argc, char* argv[]) {
         is_initialized = true;
       }
 
+      // Send PUB command status
+      if (is_pub_waiting && x_err.norm() < epsilon_pos.load() && ori_err.norm() < epsilon_ori.load()) {
+        redis_client.publish(KEY_PUB_STATUS, "done");
+        is_pub_waiting = false;
+      }
+
       // Send trajectory info to visualizer
-      redis_client.set(KEY_CONTROL_POS, x_des);
       redis_client.set(KEY_TRAJ_POS, x);
-      redis_client.set(KEY_TRAJ_ORI, quat.coeffs());
-      redis_client.set(KEY_TRAJ_POS_ERR, x_err);
-      redis_client.set(KEY_TRAJ_ORI_ERR, ori_err);
+      redis_client.set(KEY_CONTROL_POS_DES, x_des);
+      redis_client.set(KEY_CONTROL_ORI_DES, quat_des.coeffs());
+      redis_client.set(KEY_CONTROL_POS, x);
+      redis_client.set(KEY_CONTROL_ORI, quat.coeffs());
+      redis_client.set(KEY_CONTROL_POS_ERR, x_err);
+      redis_client.set(KEY_CONTROL_ORI_ERR, ori_err);
       redis_client.sync_commit();
     }
   } catch (const std::exception& e) {
@@ -303,15 +393,15 @@ void InitializeWebApp(ctrl_utils::RedisClient& redis_client, const spatial_dyn::
 
   // Register key prefixes so the web app knows which models and objects to render.
   nlohmann::json web_keys;
-  web_keys["key_models_prefix"]  = KEY_MODELS_PREFIX;
-  web_keys["key_objects_prefix"] = KEY_OBJECTS_PREFIX;
+  web_keys["key_models_prefix"]       = KEY_MODELS_PREFIX;
+  web_keys["key_objects_prefix"]      = KEY_OBJECTS_PREFIX;
+  web_keys["key_trajectories_prefix"] = KEY_TRAJ_PREFIX;
   redis_client.set(KEY_WEB_ARGS, web_keys);
 
   // Register the robot
   nlohmann::json web_model;
   web_model["model"]    = ab;
   web_model["key_q"]    = KEY_SENSOR_Q;
-  web_model["key_traj"] = KEY_TRAJ_POS;
   redis_client.set(KEY_MODELS_PREFIX + ab.name, web_model);
 
   // Create a sphere marker for x_des
@@ -320,7 +410,7 @@ void InitializeWebApp(ctrl_utils::RedisClient& redis_client, const spatial_dyn::
   x_des_marker.geometry.type = spatial_dyn::Graphics::Geometry::Type::kSphere;
   x_des_marker.geometry.radius = 0.01;
   web_object["graphics"] = std::vector<spatial_dyn::Graphics>{ x_des_marker };
-  web_object["key_pos"]  = KEY_CONTROL_POS;
+  web_object["key_pos"]  = KEY_CONTROL_POS_DES;
   redis_client.set(KEY_OBJECTS_PREFIX + x_des_marker.name, web_object);
 }
 
