@@ -24,7 +24,15 @@
 #include <ctrl_utils/timer.h>
 #include <franka_panda/articulated_body.h>
 
+namespace Eigen {
+
+using Vector7d = Matrix<double,7,1>;
+using Matrix32d = Matrix<double,3,2>;
+
+}  // namespace Eigen
+
 namespace {
+
 
 volatile std::sig_atomic_t g_runloop = true;
 void stop(int) {
@@ -72,9 +80,12 @@ const std::string KEY_KP_KV_JOINT = KEY_PREFIX + "control::kp_kv_joint";
 
 // Controller parameters
 const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107) + Eigen::Vector3d(0., 0., 0.1034);
-const Eigen::VectorXd kQHome     = (Eigen::Matrix<double,7,1>() <<
-                                   0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.).finished();
-const Eigen::Vector2d kKpKvPos   = Eigen::Vector2d(60., 10.);
+const Eigen::VectorXd kQHome     = (Eigen::Vector7d() <<
+                                    0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.).finished();
+const Eigen::Matrix32d kKpKvPos  = (Eigen::Matrix32d() <<
+                                    80., 20.,
+                                    80., 20.,
+                                    40., 10.).finished();
 const Eigen::Vector2d kKpKvOri   = Eigen::Vector2d(60., 10.);
 const Eigen::Vector2d kKpKvJoint = Eigen::Vector2d(5., 0.);
 const double kTimerFreq          = 1000.;
@@ -87,6 +98,7 @@ const double kEpsilonPos         = 0.05;
 const double kEpsilonOri         = 0.2;
 const double kEpsilonVelPos      = 0.005;
 const double kEpsilonVelOri      = 0.005;
+const std::chrono::milliseconds kTimePubWait = std::chrono::milliseconds{2000};
 
 const spatial_dyn::opspace::InverseDynamicsOptions kOpspaceOptions = []() {
   spatial_dyn::opspace::InverseDynamicsOptions options;
@@ -101,13 +113,16 @@ const spatial_dyn::IntegrationOptions kIntegrationOptions = []() {
 }();
 
 // General PD control law
-template<typename Derived1, typename Derived2, typename Derived3>
+template<typename Derived1, typename Derived2, typename Derived3, typename Derived4>
 typename Derived1::PlainObject PdControl(const Eigen::MatrixBase<Derived1>& x,
                                          const Eigen::MatrixBase<Derived2>& x_des,
                                          const Eigen::MatrixBase<Derived3>& dx,
-                                         const Eigen::Vector2d& kp_kv,
+                                         const Eigen::MatrixBase<Derived4>& kp_kv,
                                          double x_err_max = 0.,
                                          typename Derived1::PlainObject* p_x_err = nullptr) {
+  static_assert(Derived4::ColsAtCompileTime == 2 ||
+                (Derived4::ColsAtCompileTime == 1 && Derived4::RowsAtCompileTime == 2),
+                "kp_kv must be a vector of size 2 or a matrix of size x.rows() x 2.");
   typename Derived1::PlainObject x_err;
   x_err = x - x_des;
   if (p_x_err != nullptr) {
@@ -116,7 +131,11 @@ typename Derived1::PlainObject PdControl(const Eigen::MatrixBase<Derived1>& x,
   if (x_err_max > 0. && x_err.norm() > x_err_max) {
     x_err = x_err_max * x_err.normalized();
   }
-  return -kp_kv(0) * x_err - kp_kv(1) * dx;
+  if (Derived4::ColsAtCompileTime == 1) {
+    return -kp_kv(0) * x_err - kp_kv(1) * dx;
+  } else {
+    return -kp_kv.col(0).array() * x_err.array() - kp_kv.col(1).array() * dx.array();
+  }
 }
 
 // Special PD control law for orientation
@@ -203,7 +222,7 @@ int main(int argc, char* argv[]) {
   redis_sub.subscribe(KEY_PUB_COMMAND,
       [&mtx_des, &x_des, &quat_des, &mtx_pub, &x_des_pub, &quat_des_pub, &epsilon_pos,
        &epsilon_ori, &is_pub_available](const std::string& key, const std::string& val) {
-    std::cout << key << ": " << val << std::endl;
+    std::cout << "SUB " << key << ": " << val << std::endl;
     try {
       // Get current des pose
       mtx_des.lock();
@@ -269,6 +288,7 @@ int main(int argc, char* argv[]) {
   std::signal(SIGINT, &stop);
 
   bool is_initialized = false;  // Flat to set control mode on first iteration
+  auto t_pub = std::chrono::steady_clock::now();
 
   try {
     while (g_runloop) {
@@ -276,7 +296,7 @@ int main(int argc, char* argv[]) {
       timer.Sleep();
 
       // Get Redis values
-      std::future<Eigen::Vector2d> fut_kp_kv_pos   = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_POS);
+      std::future<Eigen::Matrix32d> fut_kp_kv_pos  = redis_client.get<Eigen::Matrix32d>(KEY_KP_KV_POS);
       std::future<Eigen::Vector2d> fut_kp_kv_ori   = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_ORI);
       std::future<Eigen::Vector2d> fut_kp_kv_joint = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_JOINT);
       std::future<nlohmann::json> fut_interaction  = redis_client.get<nlohmann::json>(KEY_WEB_INTERACTION);
@@ -306,6 +326,7 @@ int main(int argc, char* argv[]) {
         mtx_des.unlock();
         is_pub_available = false;
         is_pub_waiting = true;
+        t_pub = std::chrono::steady_clock::now();
       }
       mtx_pub.unlock();
 
@@ -374,11 +395,13 @@ int main(int argc, char* argv[]) {
 
       // Send PUB command status
       if (is_pub_waiting &&
-          x_err.norm() < epsilon_pos.load() && dx.norm() < kEpsilonVelPos &&
-          ori_err.norm() < epsilon_ori.load() && w.norm() < kEpsilonVelOri) {
+          ((x_err.norm() < epsilon_pos.load() && ori_err.norm() < epsilon_ori.load() &&
+            dx.norm() < kEpsilonVelPos && w.norm() < kEpsilonVelOri) ||
+           (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t_pub) > kTimePubWait &&
+            dx.norm() < kEpsilonVelPos && w.norm() < kEpsilonVelOri))) {
         redis_client.publish(KEY_PUB_STATUS, "done");
         is_pub_waiting = false;
-        std::cout << "done" << std::endl;
+        std::cout << "PUB " << KEY_PUB_STATUS << ": done" << std::endl;
       }
 
       // Send trajectory info to visualizer
