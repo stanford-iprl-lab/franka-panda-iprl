@@ -71,21 +71,21 @@ const std::string KEY_KP_KV_ORI   = KEY_PREFIX + "control::kp_kv_ori";
 const std::string KEY_KP_KV_JOINT = KEY_PREFIX + "control::kp_kv_joint";
 
 // Controller parameters
-const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107);
+const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107) + Eigen::Vector3d(0., 0., 0.1034);
 const Eigen::VectorXd kQHome     = (Eigen::Matrix<double,7,1>() <<
                                    0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.).finished();
-const Eigen::Vector2d kKpKvPos   = Eigen::Vector2d(40., 5.);
-const Eigen::Vector2d kKpKvOri   = Eigen::Vector2d(40., 5.);
+const Eigen::Vector2d kKpKvPos   = Eigen::Vector2d(60., 10.);
+const Eigen::Vector2d kKpKvOri   = Eigen::Vector2d(60., 10.);
 const Eigen::Vector2d kKpKvJoint = Eigen::Vector2d(5., 0.);
 const double kTimerFreq          = 1000.;
 const double kGainKeyPressPos    = 0.1 / kTimerFreq;
 const double kGainKeyPressOri    = 0.3 / kTimerFreq;
 const double kGainClickDrag      = 100.;
 const double kMaxErrorPos        = 0.05;
-const double kMaxErrorOri        = M_PI / 2;
-const double kEpsilonPos         = 0.01;
-const double kEpsilonOri         = 0.05;
-const double kEpsilonVelPos      = 0.001;
+const double kMaxErrorOri        = M_PI / 10;
+const double kEpsilonPos         = 0.05;
+const double kEpsilonOri         = 0.2;
+const double kEpsilonVelPos      = 0.005;
 const double kEpsilonVelOri      = 0.005;
 
 const spatial_dyn::opspace::InverseDynamicsOptions kOpspaceOptions = []() {
@@ -378,6 +378,7 @@ int main(int argc, char* argv[]) {
           ori_err.norm() < epsilon_ori.load() && w.norm() < kEpsilonVelOri) {
         redis_client.publish(KEY_PUB_STATUS, "done");
         is_pub_waiting = false;
+        std::cout << "done" << std::endl;
       }
 
       // Send trajectory info to visualizer

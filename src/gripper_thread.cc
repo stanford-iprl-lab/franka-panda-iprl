@@ -53,7 +53,7 @@ void GripperThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMem
     double width = state.width;
     double speed = 0.07;
     double force = 0.;
-    GraspTolerance grasp_tol = { 0.005, 0.005 };
+    GraspTolerance grasp_tol = { 0.02, 0.02 };
     bool grasped = false;
     GripperStatus status = GripperStatus::NOT_GRASPED;
 
@@ -84,6 +84,7 @@ void GripperThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMem
 
       switch (mode) {
         case GripperMode::GRASP:
+          std::cout << "Grasp" << std::endl;
           redis_client.sync_set(KEY_GRIPPER_STATUS, GripperStatus::GRASPING);
 
           // Perform blocking grasp
@@ -97,8 +98,10 @@ void GripperThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMem
                             std::make_pair(KEY_GRIPPER_STATUS, status));
           redis_client.sync_commit();
           redis_client.sync_publish(KEY_GRIPPER_MODE, GripperMode::IDLE);
+          std::cout << "Done" << std::endl;
           break;
         case GripperMode::MOVE:
+          std::cout << "Move" << std::endl;
           redis_client.sync_set(KEY_GRIPPER_STATUS, GripperStatus::GRASPING);
 
           // Perform blocking grasp
@@ -112,6 +115,7 @@ void GripperThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMem
                                  std::make_pair(KEY_GRIPPER_STATUS, status));
           redis_client.sync_commit();
           redis_client.sync_publish(KEY_GRIPPER_MODE, GripperMode::IDLE);
+          std::cout << "Done" << std::endl;
           break;
         default:
           state = gripper.readOnce();
