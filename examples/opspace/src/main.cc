@@ -83,17 +83,17 @@ const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107) + Eigen::Vecto
 const Eigen::VectorXd kQHome     = (Eigen::Vector7d() <<
                                     0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.).finished();
 const Eigen::Matrix32d kKpKvPos  = (Eigen::Matrix32d() <<
-                                    80., 20.,
-                                    80., 20.,
-                                    40., 10.).finished();
-const Eigen::Vector2d kKpKvOri   = Eigen::Vector2d(60., 10.);
+                                    100., 5.,
+                                    120., 10.,
+                                    100., 15.).finished();
+const Eigen::Vector2d kKpKvOri   = Eigen::Vector2d(80., 10.);
 const Eigen::Vector2d kKpKvJoint = Eigen::Vector2d(5., 0.);
 const double kTimerFreq          = 1000.;
 const double kGainKeyPressPos    = 0.1 / kTimerFreq;
 const double kGainKeyPressOri    = 0.3 / kTimerFreq;
 const double kGainClickDrag      = 100.;
-const double kMaxErrorPos        = 0.05;
-const double kMaxErrorOri        = M_PI / 10;
+const double kMaxErrorPos        = 0.03;
+const double kMaxErrorOri        = M_PI / 20;
 const double kEpsilonPos         = 0.05;
 const double kEpsilonOri         = 0.2;
 const double kEpsilonVelPos      = 0.005;
