@@ -33,7 +33,6 @@ using Matrix32d = Matrix<double,3,2>;
 
 namespace {
 
-
 volatile std::sig_atomic_t g_runloop = true;
 void stop(int) {
   g_runloop = false;
@@ -92,17 +91,19 @@ const double kTimerFreq          = 1000.;
 const double kGainKeyPressPos    = 0.1 / kTimerFreq;
 const double kGainKeyPressOri    = 0.3 / kTimerFreq;
 const double kGainClickDrag      = 100.;
-const double kMaxErrorPos        = 0.03;
-const double kMaxErrorOri        = M_PI / 20;
+const double kMaxErrorPos        = 0.05;
+const double kMaxErrorOri        = M_PI / 10;
 const double kEpsilonPos         = 0.05;
 const double kEpsilonOri         = 0.2;
 const double kEpsilonVelPos      = 0.005;
 const double kEpsilonVelOri      = 0.005;
+const double kMaxForce           = 20.;
 const std::chrono::milliseconds kTimePubWait = std::chrono::milliseconds{2000};
 
 const spatial_dyn::opspace::InverseDynamicsOptions kOpspaceOptions = []() {
   spatial_dyn::opspace::InverseDynamicsOptions options;
   options.svd_epsilon = 0.01;
+  options.f_acc_max = kMaxForce;
   return options;
 }();
 
