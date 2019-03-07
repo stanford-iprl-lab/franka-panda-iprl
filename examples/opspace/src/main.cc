@@ -91,14 +91,14 @@ const double kTimerFreq          = 1000.;
 const double kGainKeyPressPos    = 0.1 / kTimerFreq;
 const double kGainKeyPressOri    = 0.3 / kTimerFreq;
 const double kGainClickDrag      = 100.;
-const double kMaxErrorPos        = 0.05;
-const double kMaxErrorOri        = M_PI / 10;
+const double kMaxErrorPos        = 80 * 0.05;
+const double kMaxErrorOri        = 80 * M_PI / 20;
 const double kEpsilonPos         = 0.05;
 const double kEpsilonOri         = 0.2;
 const double kEpsilonVelPos      = 0.005;
 const double kEpsilonVelOri      = 0.005;
-const double kMaxForce           = 20.;
-const std::chrono::milliseconds kTimePubWait = std::chrono::milliseconds{2000};
+const double kMaxForce           = 100.;
+const std::chrono::milliseconds kTimePubWait = std::chrono::milliseconds{1000};
 
 const spatial_dyn::opspace::InverseDynamicsOptions kOpspaceOptions = []() {
   spatial_dyn::opspace::InverseDynamicsOptions options;
@@ -129,13 +129,18 @@ typename Derived1::PlainObject PdControl(const Eigen::MatrixBase<Derived1>& x,
   if (p_x_err != nullptr) {
     *p_x_err = x_err;
   }
+  if (Derived4::ColsAtCompileTime == 1) {
+    x_err = -kp_kv(0) * x_err;
+  } else {
+    x_err = -kp_kv.col(0).array() * x_err.array();
+  }
   if (x_err_max > 0. && x_err.norm() > x_err_max) {
     x_err = x_err_max * x_err.normalized();
   }
   if (Derived4::ColsAtCompileTime == 1) {
-    return -kp_kv(0) * x_err - kp_kv(1) * dx;
+    return x_err - kp_kv(1) * dx;
   } else {
-    return -kp_kv.col(0).array() * x_err.array() - kp_kv.col(1).array() * dx.array();
+    return x_err.array() - kp_kv.col(1).array() * dx.array();
   }
 }
 
@@ -150,10 +155,11 @@ Eigen::Vector3d PdControl(const Eigen::Quaterniond& quat,
   if (p_ori_err != nullptr) {
     *p_ori_err = ori_err;
   }
+  ori_err = -kp_kv(0) * ori_err;
   if (ori_err_max > 0. && ori_err.norm() > ori_err_max) {
     ori_err = ori_err_max * ori_err.normalized();
   }
-  return -kp_kv(0) * ori_err - kp_kv(1) * w;
+  return ori_err - kp_kv(1) * w;
 }
 
 void InitializeWebApp(ctrl_utils::RedisClient& redis_client, const spatial_dyn::ArticulatedBody& ab,

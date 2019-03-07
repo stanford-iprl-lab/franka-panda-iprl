@@ -175,5 +175,5 @@ control:
 
     # Collision force thresholds [N, Nm]
     # Either a single double or an array of size 6
-    f_collision: 50.
+    f_collision: 100.
 
