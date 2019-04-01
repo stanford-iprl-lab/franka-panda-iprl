@@ -24,6 +24,8 @@
 #include <ctrl_utils/timer.h>
 #include <franka_panda/articulated_body.h>
 
+const bool use_web_app = false; 
+
 namespace Eigen {
 
 using Vector7d = Matrix<double,7,1>;
@@ -82,9 +84,9 @@ const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107) + Eigen::Vecto
 const Eigen::VectorXd kQHome     = (Eigen::Vector7d() <<
                                     0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.).finished();
 const Eigen::Matrix32d kKpKvPos  = (Eigen::Matrix32d() <<
-                                    100., 5.,
-                                    120., 10.,
-                                    100., 15.).finished();
+                                    80., 15.,
+                                    80., 15.,
+                                    80., 15.).finished();
 const Eigen::Vector2d kKpKvOri   = Eigen::Vector2d(80., 10.);
 const Eigen::Vector2d kKpKvJoint = Eigen::Vector2d(5., 0.);
 const double kTimerFreq          = 1000.;
@@ -209,7 +211,10 @@ int main(int argc, char* argv[]) {
   std::mutex mtx_des;
 
   // Initialize Redis keys
-  InitializeWebApp(redis_client, ab, std::string(argv[1]));
+
+  if (use_web_app) {
+    InitializeWebApp(redis_client, ab, std::string(argv[1]));
+  }
   if (kSim) {
     redis_client.set(KEY_SENSOR_Q, ab.q());
     redis_client.set(KEY_SENSOR_DQ, ab.dq());
@@ -306,8 +311,11 @@ int main(int argc, char* argv[]) {
       std::future<Eigen::Matrix32d> fut_kp_kv_pos  = redis_client.get<Eigen::Matrix32d>(KEY_KP_KV_POS);
       std::future<Eigen::Vector2d> fut_kp_kv_ori   = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_ORI);
       std::future<Eigen::Vector2d> fut_kp_kv_joint = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_JOINT);
-      std::future<nlohmann::json> fut_interaction  = redis_client.get<nlohmann::json>(KEY_WEB_INTERACTION);
-
+      std::future<nlohmann::json> fut_interaction;
+      if (use_web_app) {
+        fut_interaction = redis_client.get<nlohmann::json>(KEY_WEB_INTERACTION);
+      }
+      
       if (!kSim) {
         std::future<std::string> fut_driver_status = redis_client.get<std::string>(KEY_DRIVER_STATUS);
         std::future<Eigen::VectorXd> fut_q         = redis_client.get<Eigen::VectorXd>(KEY_SENSOR_Q);
@@ -377,20 +385,24 @@ int main(int argc, char* argv[]) {
       tau_cmd += spatial_dyn::Gravity(ab);
 
       // Parse interaction from web app
-      nlohmann::json interaction = fut_interaction.get();
-      std::string key_down = interaction["key_down"].get<std::string>();
-      mtx_des.lock();
-      AdjustPosition(key_down, &x_des);
-      AdjustOrientation(key_down, &quat_des);
-      mtx_des.unlock();
+
+      if (use_web_app) {
+        nlohmann::json interaction = fut_interaction.get();
+        std::string key_down = interaction["key_down"].get<std::string>();
+        mtx_des.lock();
+        AdjustPosition(key_down, &x_des);
+        AdjustOrientation(key_down, &quat_des);
+        mtx_des.unlock();
+      }
+
 
       // Send control torques
       redis_client.sync_set(KEY_CONTROL_TAU, tau_cmd);
 
       if (kSim) {
         // Integrate
-        std::map<size_t, spatial_dyn::SpatialForced> f_ext = ComputeExternalForces(ab, interaction);
-        spatial_dyn::Integrate(ab, tau_cmd, timer.dt(), f_ext, kIntegrationOptions);
+        //std::map<size_t, spatial_dyn::SpatialForced> f_ext = ComputeExternalForces(ab, interaction);
+        spatial_dyn::Integrate(ab, tau_cmd, timer.dt(), {}, kIntegrationOptions);
 
         redis_client.set(KEY_SENSOR_Q, ab.q());
         redis_client.set(KEY_SENSOR_DQ, ab.dq());
