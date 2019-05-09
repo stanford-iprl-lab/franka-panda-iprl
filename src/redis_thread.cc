@@ -38,19 +38,20 @@ void RedisThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMemor
   const std::string KEY_CONTROL_MODE   = args.key_prefix + args.key_control_mode;
   const std::string KEY_CONTROL_STATUS = args.key_prefix + args.key_control_status;
   const std::string KEY_DRIVER_STATUS  = args.key_prefix + args.key_driver_status;
-  const std::string KEY_ROBOT_TIMER    = args.key_prefix + args.key_robot_timer; 
+  const std::string KEY_ROBOT_TIMER    = args.key_prefix + args.key_robot_timer;
 
   // Connect to Redis
   ctrl_utils::RedisClient redis_client;
   redis_client.connect(args.ip_redis, args.port_redis);
 
   // Set default Redis keys
-  redis_client.set(KEY_CONTROL_MODE, globals->control_mode);
+  redis_client.set(KEY_CONTROL_MODE, globals->control_mode.load());
   redis_client.set(KEY_TAU_COMMAND, ArrayToString(globals->tau_command.load(), args.use_json));
   redis_client.set(KEY_POSE_COMMAND, ArrayToString(globals->pose_command.load(), args.use_json));
   // redis_client.set(KEY_M_LOAD,     std::to_string(globals->m_load.load()));
   // redis_client.set(KEY_COM_LOAD,   ArrayToString(globals->com_load.load(),   args.use_json));
   // redis_client.set(KEY_I_COM_LOAD, ArrayToString(globals->I_com_load.load(), args.use_json));
+  redis_client.set(KEY_ROBOT_TIMER, globals->time.load());
 
   // Set initial state
   redis_client.set(KEY_Q,    ArrayToString(state.q,    args.use_json));
@@ -58,7 +59,6 @@ void RedisThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMemor
   redis_client.set(KEY_TAU,  ArrayToString(state.tau_J,  args.use_json));
   redis_client.set(KEY_DTAU, ArrayToString(state.dtau_J, args.use_json));
   redis_client.set(KEY_POSE, ArrayToString(model->pose(franka::Frame::kEndEffector, state), args.use_json));
-  redis_client.set(KEY_ROBOT_TIMER, std::to_string(0));
   nlohmann::json json_ee;
   json_ee["m"] = state.m_ee;
   json_ee["com"] = state.F_x_Cee;
@@ -105,7 +105,7 @@ void RedisThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMemor
       redis_client.set(KEY_TAU,  ArrayToString(globals->tau.load(),  args.use_json));
       redis_client.set(KEY_DTAU, ArrayToString(globals->dtau.load(), args.use_json));
       redis_client.set(KEY_POSE, ArrayToString(model->pose(franka::Frame::kEndEffector, state)));
-      redis_client.set(KEY_ROBOT_TIMER, std::to_string(globals->time));
+      redis_client.set(KEY_ROBOT_TIMER, globals->time.load());
       redis_client.set(KEY_CONTROL_STATUS, globals->control_status.load());
       redis_client.commit();
 

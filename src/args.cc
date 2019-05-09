@@ -102,7 +102,6 @@ Args ParseYaml(const char* filename) {
     args.key_control_status    = yaml["redis"]["keys"]["control_status"].as<std::string>();
     args.key_robot_timer       = yaml["redis"]["keys"]["timer"].as<std::string>();
 
-
     args.key_gripper_width     = yaml["redis"]["keys"]["gripper_width"].as<std::string>();
     args.key_gripper_max_width = yaml["redis"]["keys"]["gripper_max_width"].as<std::string>();
     args.key_gripper_status    = yaml["redis"]["keys"]["gripper_status"].as<std::string>();

@@ -10,7 +10,8 @@
 
 #include "control_thread.h"
 
-#include <array>  // std::array
+#include <array>   // std::array
+#include <chrono>  // std::chrono
 
 #include "shared_memory.h"
 
@@ -22,17 +23,21 @@ CreateTorqueController(const Args& args, const std::shared_ptr<SharedMemory>& gl
   return [&args, globals, &model](const franka::RobotState& state, franka::Duration dt) -> franka::Torques {
     static std::array<double, 7> tau_last_command = {{0., 0., 0., 0., 0., 0., 0.}};
     static franka::Duration t_last_command(0);
+    static const auto t_start = std::chrono::steady_clock::now();
 
     if (!*globals->runloop) {
       throw std::runtime_error("TorqueController(): SIGINT.");
     }
 
     // Set sensor values
-    globals->q        = state.q;
-    globals->dq       = state.dq;
-    globals->tau      = state.tau_J;
-    globals->dtau     = state.dtau_J;
-    globals->time    += dt.toMSec(); 
+    globals->q    = state.q;
+    globals->dq   = state.dq;
+    globals->tau  = state.tau_J;
+    globals->dtau = state.dtau_J;
+
+    // Set time
+    const auto ms_now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t_start);
+    globals->time = globals->time + ms_now.count();
 
     // Get control mode
     ControlMode control_mode = globals->control_mode;
