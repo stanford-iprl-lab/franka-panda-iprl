@@ -84,9 +84,9 @@ const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107) + Eigen::Vecto
 const Eigen::VectorXd kQHome     = (Eigen::Vector7d() <<
                                     0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.).finished();
 const Eigen::Matrix32d kKpKvPos  = (Eigen::Matrix32d() <<
-                                    80., 15.,
-                                    80., 15.,
-                                    80., 15.).finished();
+                                    80., 12.,
+                                    80., 12.,
+                                    80., 12.).finished();
 const Eigen::Vector2d kKpKvOri   = Eigen::Vector2d(80., 10.);
 const Eigen::Vector2d kKpKvJoint = Eigen::Vector2d(5., 0.);
 const double kTimerFreq          = 1000.;
