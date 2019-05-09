@@ -24,7 +24,7 @@
 #include <ctrl_utils/timer.h>
 #include <franka_panda/articulated_body.h>
 
-const bool use_web_app = false; 
+#define USE_WEB_APP
 
 namespace Eigen {
 
@@ -212,9 +212,10 @@ int main(int argc, char* argv[]) {
 
   // Initialize Redis keys
 
-  if (use_web_app) {
-    InitializeWebApp(redis_client, ab, std::string(argv[1]));
-  }
+#ifdef USE_WEB_APP
+  InitializeWebApp(redis_client, ab, std::string(argv[1]));
+#endif  // USE_WEB_APP
+
   if (kSim) {
     redis_client.set(KEY_SENSOR_Q, ab.q());
     redis_client.set(KEY_SENSOR_DQ, ab.dq());
@@ -311,10 +312,9 @@ int main(int argc, char* argv[]) {
       std::future<Eigen::Matrix32d> fut_kp_kv_pos  = redis_client.get<Eigen::Matrix32d>(KEY_KP_KV_POS);
       std::future<Eigen::Vector2d> fut_kp_kv_ori   = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_ORI);
       std::future<Eigen::Vector2d> fut_kp_kv_joint = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_JOINT);
-      std::future<nlohmann::json> fut_interaction;
-      if (use_web_app) {
-        fut_interaction = redis_client.get<nlohmann::json>(KEY_WEB_INTERACTION);
-      }
+#ifdef USE_WEB_APP
+      std::future<nlohmann::json> fut_interaction = redis_client.get<nlohmann::json>(KEY_WEB_INTERACTION);
+#endif  // USE_WEB_APP
       
       if (!kSim) {
         std::future<std::string> fut_driver_status = redis_client.get<std::string>(KEY_DRIVER_STATUS);
@@ -385,16 +385,14 @@ int main(int argc, char* argv[]) {
       tau_cmd += spatial_dyn::Gravity(ab);
 
       // Parse interaction from web app
-
-      if (use_web_app) {
-        nlohmann::json interaction = fut_interaction.get();
-        std::string key_down = interaction["key_down"].get<std::string>();
-        mtx_des.lock();
-        AdjustPosition(key_down, &x_des);
-        AdjustOrientation(key_down, &quat_des);
-        mtx_des.unlock();
-      }
-
+#ifdef USE_WEB_APP
+      nlohmann::json interaction = fut_interaction.get();
+      std::string key_down = interaction["key_down"].get<std::string>();
+      mtx_des.lock();
+      AdjustPosition(key_down, &x_des);
+      AdjustOrientation(key_down, &quat_des);
+      mtx_des.unlock();
+#endif  // USE_WEB_APP
 
       // Send control torques
       redis_client.sync_set(KEY_CONTROL_TAU, tau_cmd);
