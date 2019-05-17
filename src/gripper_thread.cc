@@ -79,8 +79,8 @@ void GripperThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMem
       // Get gripper command with MGET
       std::tie(mode, width, speed, force, grasp_tol) =
           redis_client.sync_mget<GripperMode, double, double, double, GraspTolerance>(
-              {KEY_GRIPPER_MODE, KEY_GRIPPER_WIDTH_DES, KEY_GRIPPER_SPEED_DES,
-               KEY_GRIPPER_FORCE_DES, KEY_GRIPPER_GRASP_TOL});
+              KEY_GRIPPER_MODE, KEY_GRIPPER_WIDTH_DES, KEY_GRIPPER_SPEED_DES,
+              KEY_GRIPPER_FORCE_DES, KEY_GRIPPER_GRASP_TOL);
 
       switch (mode) {
         case GripperMode::GRASP:

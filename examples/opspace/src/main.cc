@@ -18,6 +18,7 @@
 #include <string>     // std::string
 
 #include <spatial_dyn/spatial_dyn.h>
+#include <ctrl_utils/euclidian.h>
 #include <ctrl_utils/filesystem.h>
 #include <ctrl_utils/json.h>
 #include <ctrl_utils/redis_client.h>
@@ -153,7 +154,7 @@ Eigen::Vector3d PdControl(const Eigen::Quaterniond& quat,
                           const Eigen::Vector2d& kp_kv,
                           double ori_err_max = 0.,
                           Eigen::Vector3d* p_ori_err = nullptr) {
-  Eigen::Vector3d ori_err = spatial_dyn::opspace::OrientationError(quat, quat_des);
+  Eigen::Vector3d ori_err = ctrl_utils::OrientationError(quat, quat_des);
   if (p_ori_err != nullptr) {
     *p_ori_err = ori_err;
   }
@@ -164,6 +165,7 @@ Eigen::Vector3d PdControl(const Eigen::Quaterniond& quat,
   return ori_err - kp_kv(1) * w;
 }
 
+#ifdef USE_WEB_APP
 void InitializeWebApp(ctrl_utils::RedisClient& redis_client, const spatial_dyn::ArticulatedBody& ab,
                       const std::string& path_urdf);
 
@@ -173,6 +175,7 @@ std::map<size_t, spatial_dyn::SpatialForced> ComputeExternalForces(const spatial
 void AdjustPosition(const std::string& key, Eigen::Vector3d* pos);
 
 void AdjustOrientation(const std::string& key, Eigen::Quaterniond* quat);
+#endif  // USE_WEB_APP
 
 }  // namespace
 
@@ -356,7 +359,7 @@ int main(int argc, char* argv[]) {
 
       // Compute orientation PD control
       Eigen::Vector3d ori_err;
-      Eigen::Quaterniond quat = spatial_dyn::opspace::NearQuaternion(spatial_dyn::Orientation(ab), quat_des);
+      Eigen::Quaterniond quat = ctrl_utils::NearQuaternion(spatial_dyn::Orientation(ab), quat_des);
       Eigen::Vector3d w       = J.bottomRows<3>() * ab.dq();
       Eigen::Vector3d dw      = PdControl(quat, quat_des, w, fut_kp_kv_ori.get(), kMaxErrorOri, &ori_err);
 
@@ -399,8 +402,12 @@ int main(int argc, char* argv[]) {
 
       if (kSim) {
         // Integrate
-        //std::map<size_t, spatial_dyn::SpatialForced> f_ext = ComputeExternalForces(ab, interaction);
+#ifdef USE_WEB_APP
+        std::map<size_t, spatial_dyn::SpatialForced> f_ext = ComputeExternalForces(ab, interaction);
+        spatial_dyn::Integrate(ab, tau_cmd, timer.dt(), f_ext, kIntegrationOptions);
+#else  // USE_WEB_APP
         spatial_dyn::Integrate(ab, tau_cmd, timer.dt(), {}, kIntegrationOptions);
+#endif  // USE_WEB_APP
 
         redis_client.set(KEY_SENSOR_Q, ab.q());
         redis_client.set(KEY_SENSOR_DQ, ab.dq());
@@ -450,6 +457,7 @@ int main(int argc, char* argv[]) {
 
 namespace {
 
+#ifdef USE_WEB_APP
 void InitializeWebApp(ctrl_utils::RedisClient& redis_client, const spatial_dyn::ArticulatedBody& ab,
                       const std::string& path_urdf) {
   // Register the urdf path so the server knows it's safe to fulfill requests for files in that directory.
@@ -538,7 +546,8 @@ void AdjustOrientation(const std::string& key, Eigen::Quaterniond* quat) {
   }
   Eigen::AngleAxisd aa(sign * kGainKeyPressOri, Eigen::Vector3d::Unit(idx));
   Eigen::Quaterniond quat_prev = *quat;
-  *quat = spatial_dyn::opspace::NearQuaternion((aa * quat_prev).normalized(), quat_prev);
+  *quat = ctrl_utils::NearQuaternion((aa * quat_prev).normalized(), quat_prev);
 }
+#endif  // USE_WEB_APP
 
 }  // namespace
