@@ -21,7 +21,7 @@ ExternalProject_Add(Franka
     GIT_REPOSITORY https://github.com/frankaemika/libfranka.git
     GIT_TAG 0.5.0
     # Configure
-    CMAKE_ARGS -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF
+    CMAKE_ARGS -DBUILD_EXAMPLES=ON -DBUILD_TESTS=OFF
     # Make
     BUILD_COMMAND ${FRANKA_PANDA_CMAKE_DIR}/ncpu.sh | xargs -I {} make -j{}
     # Install

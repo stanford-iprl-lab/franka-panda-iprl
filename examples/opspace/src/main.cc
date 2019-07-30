@@ -25,7 +25,7 @@
 #include <ctrl_utils/timer.h>
 #include <franka_panda/articulated_body.h>
 
-#define USE_WEB_APP
+// #define USE_WEB_APP
 
 namespace Eigen {
 
@@ -226,6 +226,7 @@ int main(int argc, char* argv[]) {
   redis_client.set(KEY_KP_KV_POS, kKpKvPos);
   redis_client.set(KEY_KP_KV_ORI, kKpKvOri);
   redis_client.set(KEY_KP_KV_JOINT, kKpKvJoint);
+  redis_client.set(KEY_CONTROL_POS_DES, x_des);
   redis_client.sync_commit();
 
   Eigen::Vector3d x_des_pub       = spatial_dyn::Position(ab, -1, kEeOffset);
@@ -305,6 +306,7 @@ int main(int argc, char* argv[]) {
 
   bool is_initialized = false;  // Flat to set control mode on first iteration
   auto t_pub = std::chrono::steady_clock::now();
+  bool is_pose_des_new = true;
 
   try {
     while (g_runloop) {
@@ -318,6 +320,7 @@ int main(int argc, char* argv[]) {
 #ifdef USE_WEB_APP
       std::future<nlohmann::json> fut_interaction = redis_client.get<nlohmann::json>(KEY_WEB_INTERACTION);
 #endif  // USE_WEB_APP
+      std::future<Eigen::VectorXd> fut_x_des = redis_client.get<Eigen::VectorXd>(KEY_CONTROL_POS_DES);
       
       if (!kSim) {
         std::future<std::string> fut_driver_status = redis_client.get<std::string>(KEY_DRIVER_STATUS);
@@ -336,6 +339,7 @@ int main(int argc, char* argv[]) {
       }
 
       // Check for PUB commands
+      x_des = fut_x_des.get();
       mtx_pub.lock();
       if (is_pub_available) {
         mtx_des.lock();
@@ -344,6 +348,7 @@ int main(int argc, char* argv[]) {
         mtx_des.unlock();
         is_pub_available = false;
         is_pub_waiting = true;
+        is_pose_des_new = true;
         t_pub = std::chrono::steady_clock::now();
       }
       mtx_pub.unlock();
@@ -430,8 +435,11 @@ int main(int argc, char* argv[]) {
 
       // Send trajectory info to visualizer
       redis_client.set(KEY_TRAJ_POS, x);
-      redis_client.set(KEY_CONTROL_POS_DES, x_des);
-      redis_client.set(KEY_CONTROL_ORI_DES, quat_des.coeffs());
+      if (is_pose_des_new) {
+        redis_client.set(KEY_CONTROL_POS_DES, x_des);
+        redis_client.set(KEY_CONTROL_ORI_DES, quat_des.coeffs());
+        is_pose_des_new = false;
+      }
       redis_client.set(KEY_CONTROL_POS, x);
       redis_client.set(KEY_CONTROL_ORI, quat.coeffs());
       redis_client.set(KEY_CONTROL_POS_ERR, x_err);
