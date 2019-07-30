@@ -26,6 +26,7 @@ def signal_handler(sig, frame):
 KEY_PREFIX = "franka_panda::"
 KEY_MODELS_PREFIX  = KEY_PREFIX + "model::"
 KEY_OBJECTS_PREFIX = KEY_PREFIX + "object::"
+KEY_TRAJ_PREFIX    = KEY_PREFIX + "trajectory::"
 
 # GET keys
 KEY_SENSOR_Q      = KEY_PREFIX + "sensor::q"
@@ -34,14 +35,15 @@ KEY_MODEL_EE      = KEY_PREFIX + "model::inertia_ee"
 KEY_DRIVER_STATUS = KEY_PREFIX + "driver::status"
 
 # SET keys
-KEY_CONTROL_TAU   = KEY_PREFIX + "control::tau"
-KEY_CONTROL_MODE  = KEY_PREFIX + "control::mode"
-KEY_CONTROL_POS   = KEY_PREFIX + "control::pos"
-KEY_TRAJ_POS      = KEY_PREFIX + "trajectory::pos"
-KEY_TRAJ_ORI      = KEY_PREFIX + "trajectory::ori"
-KEY_TRAJ_POS_ERR  = KEY_PREFIX + "trajectory::pos_err"
-KEY_TRAJ_ORI_ERR  = KEY_PREFIX + "trajectory::ori_err"
-KEY_MODEL         = KEY_PREFIX + "model"
+KEY_CONTROL_TAU     = KEY_PREFIX + "control::tau"
+KEY_CONTROL_MODE    = KEY_PREFIX + "control::mode"
+KEY_CONTROL_POS_DES = KEY_PREFIX + "control::pos_des"
+KEY_CONTROL_ORI_DES = KEY_PREFIX + "control::ori_des"
+KEY_CONTROL_POS     = KEY_PREFIX + "control::pos"
+KEY_CONTROL_ORI     = KEY_PREFIX + "control::ori"
+KEY_CONTROL_POS_ERR = KEY_PREFIX + "control::pos_err"
+KEY_CONTROL_ORI_ERR = KEY_PREFIX + "control::ori_err"
+KEY_TRAJ_POS        = KEY_TRAJ_PREFIX + "pos"
 
 # Webapp keys
 NAME_APP          = "simulator"
@@ -49,20 +51,37 @@ KEY_WEB_RESOURCES = "webapp::resources"
 KEY_WEB_ARGS      = "webapp::" + NAME_APP + "::args"
 KEY_WEB_INTERACTION = "webapp::" + NAME_APP + "::interaction"
 
+# SUB keys
+KEY_PUB_COMMAND = KEY_PREFIX + "control::pub::command"
+
+# PUB keys
+KEY_PUB_STATUS = KEY_PREFIX + "control::pub::status"
+
 # Controller gains
 KEY_KP_KV_POS   = KEY_PREFIX + "control::kp_kv_pos"
 KEY_KP_KV_ORI   = KEY_PREFIX + "control::kp_kv_ori"
 KEY_KP_KV_JOINT = KEY_PREFIX + "control::kp_kv_joint"
 
-EE_OFFSET          = np.array([0., 0., 0.107])
+EE_OFFSET          = np.array([0., 0., 0.107]) + np.array([0., 0., 0.1034])
 Q_HOME             = np.array([0., -np.pi/6., 0., -5./6. * np.pi, 0., 2./3. * np.pi, 0.])
-KP_KV_POS          = np.array([40., 5.])
-KP_KV_ORI          = np.array([40., 5.])
+KP_KV_POS          = np.array([[80., 12.],
+                               [80., 12.],
+                               [80., 12.]])
+KP_KV_ORI          = np.array([80., 10.])
 KP_KV_JOINT        = np.array([5., 0.])
 TIMER_FREQ         = 1000.
 GAIN_KEY_PRESS_POS = 0.1 / TIMER_FREQ
 GAIN_KEY_PRESS_ORI = 0.3 / TIMER_FREQ
 GAIN_CLICK_DRAG    = 100.
+MAX_ERROR_POS      = 80 * 0.05
+MAX_ERROR_ORI      = 80 * np.pi / 20
+EPSILON_POS        = 0.05
+EPSILON_ORI        = 0.2
+EPSILON_VEL_POS    = 0.005
+EPSILON_VEL_ORI    = 0.005
+MAX_FORCE          = 100
+TIME_PUB_WAIT      = 1  # sec
+
 
 def pd_control(x, x_des, dx, kp_kv):
     if type(x) is eigen.Quaterniond:

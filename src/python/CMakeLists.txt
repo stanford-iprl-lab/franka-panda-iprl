@@ -13,12 +13,8 @@
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/frankapanda)
 
-find_package(pybind11 QUIET)
-if(NOT pybind11_FOUND)
-    download_package(pybind11)
-    set(PYBIND11_LIB_DIR ${FRANKA_PANDA_EXT_DIR}/pybind11.git)
-    add_subdirectory(${PYBIND11_LIB_DIR} ${CMAKE_CURRENT_BINARY_DIR}/pybind11)
-endif()
+set(PYBIND11_LIB_DIR ${ctrl_utils_EXTERNAL_DIR}/pybind11.git)
+add_subdirectory(${PYBIND11_LIB_DIR} ${CMAKE_CURRENT_BINARY_DIR}/pybind11)
 
 pybind11_add_module(frankapanda franka_panda.cc)
 target_link_libraries(frankapanda
@@ -26,7 +22,7 @@ target_link_libraries(frankapanda
         franka_panda::franka_panda
         pybind11::pybind11)
 
-find_package(spatial_dyn 1.0.0 QUIET)
+find_package(spatial_dyn 1.1.0 QUIET)
 if(spatial_dyn_FOUND)
     pybind11_add_module(spatialdyn articulated_body.cc)
     target_link_libraries(spatialdyn

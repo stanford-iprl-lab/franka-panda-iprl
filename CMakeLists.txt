@@ -12,7 +12,7 @@
 cmake_minimum_required(VERSION 3.6)
 
 # Define project
-project(franka_panda VERSION 1.0.0 LANGUAGES CXX)
+project(franka_panda VERSION 1.1.0 LANGUAGES CXX)
 
 # Set CMake flags
 set(CMAKE_CXX_STANDARD 14)
@@ -25,10 +25,10 @@ endif()
 set(FRANKA_PANDA_LIB franka_panda)
 set(FRANKA_PANDA_BIN franka_panda_driver)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
-set(FRANKA_PANDA_CMAKE_DIR ${PROJECT_SOURCE_DIR}/cmake)
-set(FRANKA_PANDA_EXT_DIR ${PROJECT_SOURCE_DIR}/external)
-set(FRANKA_PANDA_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
-set(FRANKA_PANDA_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
+set(LIB_CMAKE_DIR ${PROJECT_SOURCE_DIR}/cmake)
+set(LIB_EXTERNAL_DIR ${PROJECT_SOURCE_DIR}/external)
+set(LIB_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
+set(LIB_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 
 # Create Franka Panda driver
 add_executable(${FRANKA_PANDA_BIN} "")
@@ -40,9 +40,16 @@ target_compile_options(${FRANKA_PANDA_BIN} PRIVATE
 )
 
 # Find dependencies
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_BINARY_DIR} ${LIB_CMAKE_DIR})
+
 function(download_package PACKAGE_NAME)
-    configure_file(${FRANKA_PANDA_CMAKE_DIR}/${PACKAGE_NAME}-CMakeLists.txt.in
-        ${CMAKE_BINARY_DIR}/${PACKAGE_NAME}/CMakeLists.txt)
+    set(EXT_PACKAGE_VERSION ${ARGV1})
+    if(EXISTS ${LIB_CMAKE_DIR}/Find${PACKAGE_NAME}.cmake.in)
+        configure_file(${LIB_CMAKE_DIR}/Find${PACKAGE_NAME}.cmake.in
+            ${CMAKE_BINARY_DIR}/Find${PACKAGE_NAME}.cmake @ONLY)
+    endif()
+    configure_file(${LIB_CMAKE_DIR}/${PACKAGE_NAME}-CMakeLists.txt.in
+        ${CMAKE_BINARY_DIR}/${PACKAGE_NAME}/CMakeLists.txt @ONLY)
     execute_process(COMMAND ${CMAKE_COMMAND} -G ${CMAKE_GENERATOR} .
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/${PACKAGE_NAME})
     execute_process(COMMAND ${CMAKE_COMMAND} --build .
@@ -50,23 +57,16 @@ function(download_package PACKAGE_NAME)
 endfunction()
 
 # Export for build tree
-configure_file(${FRANKA_PANDA_CMAKE_DIR}/Findcpp_redis.cmake.in
-    ${CMAKE_BINARY_DIR}/Findcpp_redis.cmake @ONLY)
-configure_file(${FRANKA_PANDA_CMAKE_DIR}/FindEigen3.cmake.in
-    ${CMAKE_BINARY_DIR}/FindEigen3.cmake @ONLY)
-configure_file(${FRANKA_PANDA_CMAKE_DIR}/Findyaml-cpp.cmake.in
-    ${CMAKE_BINARY_DIR}/Findyaml-cpp.cmake @ONLY)
-
 find_package(Franka 0.5.0 QUIET)
 if (NOT Franka_FOUND)
     download_package(Franka)
     find_package(Franka 0.5.0 REQUIRED PATHS ${CMAKE_BINARY_DIR}/libfranka/build)
 endif()
 
-find_package(ctrl_utils 1.0.0 QUIET)
+find_package(ctrl_utils 1.1.0 QUIET)
 if(NOT ctrl_utils_FOUND)
-    download_package(ctrl_utils)
-    find_package(ctrl_utils 1.0.0 REQUIRED)
+    download_package(ctrl_utils 1.1.0)
+    find_package(ctrl_utils 1.1.0 REQUIRED)
 endif()
 
 target_link_libraries(${FRANKA_PANDA_BIN}
@@ -82,15 +82,14 @@ target_include_directories(${FRANKA_PANDA_BIN}
         ${FRANKA_PANDA_SRC_DIR})
 
 # Attach sources
-target_sources(${FRANKA_PANDA_BIN}
-    PRIVATE
-        ${FRANKA_PANDA_SRC_DIR}/main.cc
-        ${FRANKA_PANDA_SRC_DIR}/args.cc
-        ${FRANKA_PANDA_SRC_DIR}/cartesian_pose_control.cc
-        ${FRANKA_PANDA_SRC_DIR}/control_thread.cc
-        ${FRANKA_PANDA_SRC_DIR}/gripper_thread.cc
-        ${FRANKA_PANDA_SRC_DIR}/redis_thread.cc
-        ${FRANKA_PANDA_SRC_DIR}/torque_control.cc
+target_sources(${FRANKA_PANDA_BIN} PRIVATE
+    ${LIB_SRC_DIR}/main.cc
+    ${LIB_SRC_DIR}/args.cc
+    ${LIB_SRC_DIR}/cartesian_pose_control.cc
+    ${LIB_SRC_DIR}/control_thread.cc
+    ${LIB_SRC_DIR}/gripper_thread.cc
+    ${LIB_SRC_DIR}/redis_thread.cc
+    ${LIB_SRC_DIR}/torque_control.cc
 )
 
 # Create franka_panda library
@@ -104,7 +103,7 @@ target_compile_options(${FRANKA_PANDA_BIN} PRIVATE
 )
 
 # Link internal model library
-find_library(FCI_MODELS_LIB fcimodels REQUIRED PATHS ${FRANKA_PANDA_EXT_DIR})
+find_library(FCI_MODELS_LIB fcimodels REQUIRED PATHS ${LIB_EXTERNAL_DIR})
 target_link_libraries(${FRANKA_PANDA_LIB}
     PUBLIC
         Eigen3::Eigen
@@ -117,15 +116,14 @@ target_link_libraries(${FRANKA_PANDA_LIB}
 target_include_directories(${FRANKA_PANDA_LIB}
     PUBLIC
         $<INSTALL_INTERFACE:include>
-        $<BUILD_INTERFACE:${FRANKA_PANDA_INCLUDE_DIR}>
+        $<BUILD_INTERFACE:${LIB_INCLUDE_DIR}>
     PRIVATE
-        ${FRANKA_PANDA_EXT_DIR}/libfranka.git/src
+        ${LIB_EXTERNAL_DIR}/libfranka.git/src
 )
 
 # Attach sources
-target_sources(${FRANKA_PANDA_LIB}
-    PRIVATE
-        ${FRANKA_PANDA_SRC_DIR}/model.cc
+target_sources(${FRANKA_PANDA_LIB} PRIVATE
+    ${LIB_SRC_DIR}/model.cc
 )
 
 # # Use GNUInstalDirs to install ibraries into correct locations on all platforms
@@ -144,7 +142,7 @@ install(TARGETS ${FRANKA_PANDA_LIB}
 )
 
 # Install the headers
-install(DIRECTORY ${FRANKA_PANDA_INCLUDE_DIR} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${LIB_INCLUDE_DIR} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Export targets to Targets.cmake
 install(EXPORT ${FRANKA_PANDA_TARGETS}
@@ -161,7 +159,7 @@ write_basic_package_version_file(${CMAKE_BINARY_DIR}/${FRANKA_PANDA_CONFIG}Versi
 )
 
 # Create Config.cmake
-configure_package_config_file(${FRANKA_PANDA_CMAKE_DIR}/${FRANKA_PANDA_CONFIG}.cmake.in
+configure_package_config_file(${LIB_CMAKE_DIR}/${FRANKA_PANDA_CONFIG}.cmake.in
     ${CMAKE_BINARY_DIR}/${FRANKA_PANDA_CONFIG}.cmake
     INSTALL_DESTINATION ${FRANKA_PANDA_CONFIG_INSTALL_DIR})
 
@@ -173,7 +171,7 @@ install(FILES
 )
 
 # Build python wrapper
-add_subdirectory(${FRANKA_PANDA_SRC_DIR}/python)
+add_subdirectory(${LIB_SRC_DIR}/python)
 
 export(TARGETS ${FRANKA_PANDA_LIB}
     NAMESPACE ${FRANKA_PANDA_LIB}::

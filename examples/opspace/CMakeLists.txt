@@ -37,15 +37,16 @@ target_compile_options(${FRANKA_OPSPACE_BIN} PRIVATE
     $<$<CONFIG:RELEASE>:-O3>
 )
 
-find_package(spatial_dyn 1.0.0 REQUIRED)
-find_package(franka_panda 1.0.0 REQUIRED)
-find_package(ctrl_utils 1.0.0 REQUIRED)
+find_package(spatial_dyn 1.1.0 REQUIRED)
+find_package(redis_gl 1.0.0 REQUIRED)
+find_package(franka_panda 1.1.0 REQUIRED)
+find_package(ctrl_utils 1.1.0 REQUIRED)
 
-target_link_libraries(${FRANKA_OPSPACE_BIN}
-    PRIVATE
-        spatial_dyn::spatial_dyn
-        franka_panda::franka_panda
-        ctrl_utils::ctrl_utils
+target_link_libraries(${FRANKA_OPSPACE_BIN} PRIVATE
+    spatial_dyn::spatial_dyn
+    franka_panda::franka_panda
+    ctrl_utils::ctrl_utils
+    redis_gl::redis_gl
 )
 
 # Attach sources
