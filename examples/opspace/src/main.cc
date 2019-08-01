@@ -53,6 +53,8 @@ const std::string KEY_TRAJ_PREFIX    = KEY_PREFIX + "trajectory::";
 // GET keys
 const std::string KEY_SENSOR_Q      = KEY_PREFIX + "sensor::q";
 const std::string KEY_SENSOR_DQ     = KEY_PREFIX + "sensor::dq";
+const std::string KEY_SENSOR_POS    = KEY_PREFIX + "sensor::pos";
+const std::string KEY_SENSOR_ORI    = KEY_PREFIX + "sensor::ori";
 const std::string KEY_MODEL_EE      = KEY_PREFIX + "model::inertia_ee";
 const std::string KEY_DRIVER_STATUS = KEY_PREFIX + "driver::status";
 
@@ -82,7 +84,9 @@ const std::string KEY_KP_KV_ORI   = KEY_PREFIX + "control::kp_kv_ori";
 const std::string KEY_KP_KV_JOINT = KEY_PREFIX + "control::kp_kv_joint";
 
 // Controller parameters
-const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107) + Eigen::Vector3d(0., 0., 0.1034);
+const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107);  // Without gripper
+const Eigen::Vector3d kFrankaGripperOffset  = Eigen::Vector3d(0., 0., 0.1034);
+const Eigen::Vector3d kRobotiqGripperOffset = Eigen::Vector3d(0., 0., 0.135);  // Ranges from 0.130 to 0.144
 const Eigen::VectorXd kQHome     = (Eigen::Vector7d() <<
                                     0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.).finished();
 const Eigen::Matrix32d kKpKvPos  = (Eigen::Matrix32d() <<
@@ -127,15 +131,41 @@ void AdjustPosition(const std::string& key, Eigen::Vector3d* pos);
 void AdjustOrientation(const std::string& key, Eigen::Quaterniond* quat);
 #endif  // USE_WEB_APP
 
+struct Args {
+
+  Args(int argc, char* argv[]) {
+    size_t idx_required = 0;
+    for (int i = 1; i < argc; i++) {
+      const std::string arg(argv[i]);
+      if (arg == "--sim") {
+        sim = true;
+      } else if (arg == "--no-gripper") {
+        gripper = false;
+      } else if (arg == "--robotiq") {
+        robotiq = true;
+        gripper = false;
+      } else if (idx_required == 0) {
+        path_urdf = arg;
+        idx_required++;
+      }
+    }
+  }
+
+  std::string path_urdf = "../../../resources/franka_panda.urdf";
+  bool sim = false;
+  bool gripper = true;
+  bool robotiq = false;
+
+};
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  if (argc < 2) {
-    std::cout << "Usage:" << std::endl
-              << "\t./franka_panda_opspace <franka_panda.urdf> [--sim]" << std::endl;
-    return 0;
-  }
-  const bool kSim = (argc > 2 && std::string(argv[2]) == "--sim");
+  std::cout << "Usage:" << std::endl
+            << "\t./franka_panda_opspace <franka_panda.urdf> [--sim] [--no-gripper] [--robotiq]" << std::endl
+            << std::endl;
+
+  const Args args(argc, argv);
 
   // Create timer and Redis client
   ctrl_utils::Timer timer(kTimerFreq);
@@ -145,13 +175,31 @@ int main(int argc, char* argv[]) {
   redis_sub.connect();
 
   // Load robot
-  franka_panda::ArticulatedBody ab = spatial_dyn::urdf::LoadModel(argv[1]);
-  if (kSim) {
+  std::cout << "Loading urdf: " << args.path_urdf << std::endl;
+  franka_panda::ArticulatedBody ab = spatial_dyn::urdf::LoadModel(args.path_urdf);
+  if (args.sim) {
     ab.set_q(kQHome);
     ab.set_dq(Eigen::VectorXd::Zero(ab.dof()));
   } else {
-    ab.set_q(redis_client.sync_get<Eigen::VectorXd>(KEY_SENSOR_Q));
-    ab.set_dq(redis_client.sync_get<Eigen::VectorXd>(KEY_SENSOR_DQ));
+    try {
+      ab.set_q(redis_client.sync_get<Eigen::VectorXd>(KEY_SENSOR_Q));
+      ab.set_dq(redis_client.sync_get<Eigen::VectorXd>(KEY_SENSOR_DQ));
+    } catch (...) {
+      std::cerr << "Error: franka_panda driver is not running." << std::endl;
+      return 0;
+    }
+  }
+
+  // Set gripper
+  const Eigen::Vector3d gripper_offset = args.gripper ? kFrankaGripperOffset
+                                                      : args.robotiq ? kRobotiqGripperOffset
+                                                                     : Eigen::Vector3d::Zero();
+  const Eigen::Vector3d ee_offset = kEeOffset + gripper_offset;
+  if (!args.gripper) {
+    std::vector<spatial_dyn::Graphics>& graphics = const_cast<std::vector<spatial_dyn::Graphics>&>(ab.rigid_bodies(-1).graphics);
+    for (size_t i = 1, num_graphics = graphics.size(); i < num_graphics; i++) {
+      graphics.pop_back();
+    }
   }
   // ab.set_inertia_compensation(Eigen::Vector3d(0.2, 0.1, 0.1));
   // ab.set_stiction_coefficients(Eigen::Vector3d(0.8, 0.8, 0.6));
@@ -159,39 +207,43 @@ int main(int argc, char* argv[]) {
 
   // Initialize controller parameters
   Eigen::VectorXd q_des       = kQHome;
-  Eigen::Vector3d x_des       = spatial_dyn::Position(ab, -1, kEeOffset);
+  Eigen::Vector3d x_des       = spatial_dyn::Position(ab, -1, ee_offset);
   Eigen::Quaterniond quat_des = spatial_dyn::Orientation(ab);
   std::mutex mtx_des;
 
   // Initialize Redis keys
 
 #ifdef USE_WEB_APP
-  const std::filesystem::path path_urdf = std::filesystem::current_path() / std::filesystem::path(argv[1]);
-  redis_gl::simulator::RegisterResourcePath(redis_client, path_urdf.parent_path().string());
+  const std::filesystem::path path_resources = (std::filesystem::current_path() /
+                                                std::filesystem::path(args.path_urdf)).parent_path();
+  redis_gl::simulator::RegisterResourcePath(redis_client, path_resources.string());
 
   redis_gl::simulator::ModelKeys model_keys("franka_panda");
   redis_gl::simulator::RegisterModelKeys(redis_client, model_keys);
 
   redis_gl::simulator::RegisterRobot(redis_client, model_keys, ab, KEY_SENSOR_Q);
 
+  redis_gl::simulator::RegisterTrajectory(redis_client, model_keys, "x_ee", KEY_CONTROL_POS);
+
   spatial_dyn::Graphics x_des_marker("x_des_marker");
   x_des_marker.geometry.type = spatial_dyn::Graphics::Geometry::Type::kSphere;
   x_des_marker.geometry.radius = 0.01;
-  redis_gl::simulator::RegisterObject(redis_client, model_keys, x_des_marker, KEY_CONTROL_POS_DES, "");
-  // InitializeWebApp(redis_client, ab, std::string(argv[1]));
+  redis_gl::simulator::RegisterObject(redis_client, model_keys, x_des_marker, KEY_CONTROL_POS_DES, KEY_CONTROL_ORI_DES);
 #endif  // USE_WEB_APP
 
-  if (kSim) {
+  if (args.sim) {
     redis_client.set(KEY_SENSOR_Q, ab.q());
     redis_client.set(KEY_SENSOR_DQ, ab.dq());
   }
+  redis_client.set(KEY_SENSOR_POS, spatial_dyn::Position(ab, -1, kEeOffset));
+  redis_client.set(KEY_SENSOR_ORI, spatial_dyn::Orientation(ab).coeffs());
   redis_client.set(KEY_KP_KV_POS, kKpKvPos);
   redis_client.set(KEY_KP_KV_ORI, kKpKvOri);
   redis_client.set(KEY_KP_KV_JOINT, kKpKvJoint);
   redis_client.set(KEY_CONTROL_POS_DES, x_des);
   redis_client.sync_commit();
 
-  Eigen::Vector3d x_des_pub       = spatial_dyn::Position(ab, -1, kEeOffset);
+  Eigen::Vector3d x_des_pub       = spatial_dyn::Position(ab, -1, ee_offset);
   Eigen::Quaterniond quat_des_pub = spatial_dyn::Orientation(ab);
   std::atomic<double> epsilon_pos = { kEpsilonPos };
   std::atomic<double> epsilon_ori = { kEpsilonOri };
@@ -279,13 +331,13 @@ int main(int argc, char* argv[]) {
       std::future<Eigen::Matrix32d> fut_kp_kv_pos  = redis_client.get<Eigen::Matrix32d>(KEY_KP_KV_POS);
       std::future<Eigen::Vector2d> fut_kp_kv_ori   = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_ORI);
       std::future<Eigen::Vector2d> fut_kp_kv_joint = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_JOINT);
+      std::future<Eigen::VectorXd> fut_x_des       = redis_client.get<Eigen::VectorXd>(KEY_CONTROL_POS_DES);
 #ifdef USE_WEB_APP
       std::future<redis_gl::simulator::Interaction> fut_interaction =
           redis_client.get<redis_gl::simulator::Interaction>(redis_gl::simulator::KEY_INTERACTION);
 #endif  // USE_WEB_APP
-      std::future<Eigen::VectorXd> fut_x_des = redis_client.get<Eigen::VectorXd>(KEY_CONTROL_POS_DES);
 
-      if (!kSim) {
+      if (!args.sim) {
         std::future<std::string> fut_driver_status = redis_client.get<std::string>(KEY_DRIVER_STATUS);
         std::future<Eigen::VectorXd> fut_q         = redis_client.get<Eigen::VectorXd>(KEY_SENSOR_Q);
         std::future<Eigen::VectorXd> fut_dq        = redis_client.get<Eigen::VectorXd>(KEY_SENSOR_DQ);
@@ -317,19 +369,19 @@ int main(int argc, char* argv[]) {
       mtx_pub.unlock();
 
       // Compute Jacobian
-      const Eigen::Matrix6Xd& J = spatial_dyn::Jacobian(ab, -1, kEeOffset);
+      const Eigen::Matrix6Xd& J = spatial_dyn::Jacobian(ab, -1, ee_offset);
 
       // Compute position PD control
       Eigen::Vector3d x_err;
-      Eigen::Vector3d x = spatial_dyn::Position(ab, -1, kEeOffset);
-      Eigen::Vector3d dx = J.topRows<3>() * ab.dq();
-      Eigen::Vector3d ddx = ctrl_utils::PdControl(x, x_des, dx, fut_kp_kv_pos.get(), kMaxErrorPos, &x_err);
+      const Eigen::Vector3d x = spatial_dyn::Position(ab, -1, ee_offset);
+      const Eigen::Vector3d dx = J.topRows<3>() * ab.dq();
+      const Eigen::Vector3d ddx = ctrl_utils::PdControl(x, x_des, dx, fut_kp_kv_pos.get(), kMaxErrorPos, &x_err);
 
       // Compute orientation PD control
       Eigen::Vector3d ori_err;
-      Eigen::Quaterniond quat = ctrl_utils::NearQuaternion(spatial_dyn::Orientation(ab), quat_des);
-      Eigen::Vector3d w = J.bottomRows<3>() * ab.dq();
-      Eigen::Vector3d dw = ctrl_utils::PdControl(quat, quat_des, w, fut_kp_kv_ori.get(), kMaxErrorOri, &ori_err);
+      const Eigen::Quaterniond quat = ctrl_utils::NearQuaternion(spatial_dyn::Orientation(ab), quat_des);
+      const Eigen::Vector3d w = J.bottomRows<3>() * ab.dq();
+      const Eigen::Vector3d dw = ctrl_utils::PdControl(quat, quat_des, w, fut_kp_kv_ori.get(), kMaxErrorOri, &ori_err);
 
       // Compute opspace torques
       Eigen::MatrixXd N;
@@ -346,7 +398,7 @@ int main(int argc, char* argv[]) {
 
       // Add joint task in nullspace
       static const Eigen::MatrixXd I = Eigen::MatrixXd::Identity(ab.dof(), ab.dof());
-      Eigen::VectorXd ddq = ctrl_utils::PdControl(ab.q(), q_des, ab.dq(), fut_kp_kv_joint.get());
+      const Eigen::VectorXd ddq = ctrl_utils::PdControl(ab.q(), q_des, ab.dq(), fut_kp_kv_joint.get());
       tau_cmd += spatial_dyn::opspace::InverseDynamics(ab, I, ddq, &N);
 
       // Add friction compensation
@@ -355,23 +407,28 @@ int main(int argc, char* argv[]) {
       // Add gravity compensation
       tau_cmd += spatial_dyn::Gravity(ab);
 
+      // Send control torques
+      redis_client.set(KEY_CONTROL_TAU, tau_cmd);
+      redis_client.commit();
+
       // Parse interaction from web app
 #ifdef USE_WEB_APP
-      redis_gl::simulator::Interaction interaction = fut_interaction.get();
-      mtx_des.lock();
-      AdjustPosition(interaction.key_down, &x_des);
-      AdjustOrientation(interaction.key_down, &quat_des);
-      mtx_des.unlock();
-      is_pose_des_new = true;
+      std::map<size_t, spatial_dyn::SpatialForced> f_ext;
+      try {
+        redis_gl::simulator::Interaction interaction = fut_interaction.get();
+        mtx_des.lock();
+        AdjustPosition(interaction.key_down, &x_des);
+        AdjustOrientation(interaction.key_down, &quat_des);
+        mtx_des.unlock();
+
+        f_ext = ComputeExternalForces(model_keys, ab, interaction);
+        is_pose_des_new = true;
+      } catch (...) {}
 #endif  // USE_WEB_APP
 
-      // Send control torques
-      redis_client.sync_set(KEY_CONTROL_TAU, tau_cmd);
-
-      if (kSim) {
+      if (args.sim) {
         // Integrate
 #ifdef USE_WEB_APP
-        std::map<size_t, spatial_dyn::SpatialForced> f_ext = ComputeExternalForces(model_keys, ab, interaction);
         spatial_dyn::Integrate(ab, tau_cmd, timer.dt(), f_ext, kIntegrationOptions);
 #else  // USE_WEB_APP
         spatial_dyn::Integrate(ab, tau_cmd, timer.dt(), {}, kIntegrationOptions);
@@ -397,12 +454,13 @@ int main(int argc, char* argv[]) {
       }
 
       // Send trajectory info to visualizer
-      redis_client.set(KEY_TRAJ_POS, x);
       if (is_pose_des_new) {
         redis_client.set(KEY_CONTROL_POS_DES, x_des);
         redis_client.set(KEY_CONTROL_ORI_DES, quat_des.coeffs());
         is_pose_des_new = false;
       }
+      redis_client.set(KEY_SENSOR_POS, spatial_dyn::Position(ab, -1, kEeOffset));
+      redis_client.set(KEY_SENSOR_ORI, spatial_dyn::Orientation(ab).coeffs());
       redis_client.set(KEY_CONTROL_POS, x);
       redis_client.set(KEY_CONTROL_ORI, quat.coeffs());
       redis_client.set(KEY_CONTROL_POS_ERR, x_err);
@@ -414,11 +472,17 @@ int main(int argc, char* argv[]) {
   }
 
   // Clear torques
-  if (!kSim) {
+  if (!args.sim) {
     redis_client.sync_set(KEY_CONTROL_MODE, "floating");
     std::cout << "Cleared torques and set control mode to 'floating'." << std::endl;
   }
   redis_client.sync_set(KEY_CONTROL_TAU, Eigen::VectorXd::Zero(ab.dof()));
+
+#ifdef USE_WEB_APP
+  redis_gl::simulator::UnregisterResourcePath(redis_client, path_resources.string());
+  redis_gl::simulator::UnregisterModelKeys(redis_client, model_keys);
+  redis_client.sync_commit();
+#endif  // USE_WEB_APP
 
   // Print simulation stats
   std::cout << "Simulated " << timer.time_sim() << "s in " << timer.time_elapsed() << "s." << std::endl;
