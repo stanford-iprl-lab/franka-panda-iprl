@@ -9,7 +9,7 @@
 		</inertial>
 		<visual>
 			<geometry>
-				<mesh filename="graphics/link0.obj" />
+				<mesh filename="visual/link0.dae" />
 			</geometry>
 		</visual>
 		<collision>
@@ -26,7 +26,7 @@
 		</inertial>
 		<visual>
 			<geometry>
-				<mesh filename="graphics/link1.obj" />
+				<mesh filename="visual/link1.dae" />
 			</geometry>
 		</visual>
 		<collision>
@@ -43,7 +43,7 @@
 		</inertial>
 		<visual>
 			<geometry>
-				<mesh filename="graphics/link2.obj" />
+				<mesh filename="visual/link2.dae" />
 			</geometry>
 		</visual>
 		<collision>
@@ -60,7 +60,7 @@
 		</inertial>
 		<visual>
 			<geometry>
-				<mesh filename="graphics/link3.obj" />
+				<mesh filename="visual/link3.dae" />
 			</geometry>
 		</visual>
 		<collision>
@@ -77,7 +77,7 @@
 		</inertial>
 		<visual>
 			<geometry>
-				<mesh filename="graphics/link4.obj" />
+				<mesh filename="visual/link4.dae" />
 			</geometry>
 		</visual>
 		<collision>
@@ -94,7 +94,7 @@
 		</inertial>
 		<visual>
 			<geometry>
-				<mesh filename="graphics/link5.obj" />
+				<mesh filename="visual/link5.dae" />
 			</geometry>
 		</visual>
 		<collision>
@@ -111,7 +111,7 @@
 		</inertial>
 		<visual>
 			<geometry>
-				<mesh filename="graphics/link6.obj" />
+				<mesh filename="visual/link6.dae" />
 			</geometry>
 		</visual>
 		<collision>
@@ -129,25 +129,25 @@
 		<visual>
 			<origin xyz="0 0 0" rpy="0 0 0" />
 			<geometry>
-				<mesh filename="graphics/link7.obj" />
+				<mesh filename="visual/link7.dae" />
 			</geometry>
 		</visual>
 		<visual>
 			<origin xyz="0 0 0.107" rpy="0 0 -0.78539816339" />
 			<geometry>
-				<mesh filename="graphics/hand.obj" />
+				<mesh filename="visual/hand.dae" />
 			</geometry>
 		</visual>
 		<visual>
 			<origin xyz="0 0 0.1654" rpy="0 0 2.35619449019" />
 			<geometry>
-				<mesh filename="graphics/finger.obj" />
+				<mesh filename="visual/finger.dae" />
 			</geometry>
 		</visual>
 		<visual>
 			<origin xyz="0 0 0.1654" rpy="0 0 -0.78539816339" />
 			<geometry>
-				<mesh filename="graphics/finger.obj" />
+				<mesh filename="visual/finger.dae" />
 			</geometry>
 		</visual>
 		<collision>
