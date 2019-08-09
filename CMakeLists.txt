@@ -59,7 +59,7 @@ endfunction()
 # Export for build tree
 find_package(Franka 0.5.0 QUIET)
 if (NOT Franka_FOUND)
-    download_package(Franka)
+    download_package(Franka 0.5.0)
     find_package(Franka 0.5.0 REQUIRED PATHS ${CMAKE_BINARY_DIR}/libfranka/build)
 endif()
 
