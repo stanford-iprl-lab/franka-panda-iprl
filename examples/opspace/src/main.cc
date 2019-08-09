@@ -82,6 +82,8 @@ const std::string KEY_PUB_STATUS = KEY_PREFIX + "control::pub::status";
 const std::string KEY_KP_KV_POS   = KEY_PREFIX + "control::kp_kv_pos";
 const std::string KEY_KP_KV_ORI   = KEY_PREFIX + "control::kp_kv_ori";
 const std::string KEY_KP_KV_JOINT = KEY_PREFIX + "control::kp_kv_joint";
+const std::string KEY_POS_ERR_MAX = KEY_PREFIX + "control::pos_err_max";
+const std::string KEY_ORI_ERR_MAX = KEY_PREFIX + "control::ori_err_max";
 
 // Controller parameters
 const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107);  // Without gripper
@@ -99,8 +101,8 @@ const double kTimerFreq          = 1000.;
 const double kGainKeyPressPos    = 0.1 / kTimerFreq;
 const double kGainKeyPressOri    = 0.3 / kTimerFreq;
 const double kGainClickDrag      = 100.;
-const double kMaxErrorPos        = 80 * 0.05;
-const double kMaxErrorOri        = 80 * M_PI / 20;
+const double kMaxErrorPos        = kKpKvPos(0, 0) * 0.05;
+const double kMaxErrorOri        = kKpKvOri(0, 0) * M_PI / 20;
 const double kEpsilonPos         = 0.05;
 const double kEpsilonOri         = 0.2;
 const double kEpsilonVelPos      = 0.005;
@@ -120,16 +122,6 @@ const spatial_dyn::IntegrationOptions kIntegrationOptions = []() {
   options.friction = true;
   return options;
 }();
-
-#ifdef USE_WEB_APP
-std::map<size_t, spatial_dyn::SpatialForced> ComputeExternalForces(const redis_gl::simulator::ModelKeys& model_keys,
-                                                                   const spatial_dyn::ArticulatedBody& ab,
-                                                                   const redis_gl::simulator::Interaction& interaction);
-
-void AdjustPosition(const std::string& key, Eigen::Vector3d* pos);
-
-void AdjustOrientation(const std::string& key, Eigen::Quaterniond* quat);
-#endif  // USE_WEB_APP
 
 struct Args {
 
@@ -240,7 +232,10 @@ int main(int argc, char* argv[]) {
   redis_client.set(KEY_KP_KV_POS, kKpKvPos);
   redis_client.set(KEY_KP_KV_ORI, kKpKvOri);
   redis_client.set(KEY_KP_KV_JOINT, kKpKvJoint);
+  redis_client.set(KEY_POS_ERR_MAX, kMaxErrorPos);
+  redis_client.set(KEY_ORI_ERR_MAX, kMaxErrorOri);
   redis_client.set(KEY_CONTROL_POS_DES, x_des);
+  redis_client.set(KEY_CONTROL_ORI_DES, quat_des.coeffs());
   redis_client.sync_commit();
 
   Eigen::Vector3d x_des_pub       = spatial_dyn::Position(ab, -1, ee_offset);
@@ -322,6 +317,8 @@ int main(int argc, char* argv[]) {
   auto t_pub = std::chrono::steady_clock::now();
   bool is_pose_des_new = true;
 
+  Eigen::Quaterniond quat_0 = Eigen::Quaterniond::Identity();  // Track previous quat for continuity
+
   try {
     while (g_runloop) {
       // Wait for next loop
@@ -331,7 +328,10 @@ int main(int argc, char* argv[]) {
       std::future<Eigen::Matrix32d> fut_kp_kv_pos  = redis_client.get<Eigen::Matrix32d>(KEY_KP_KV_POS);
       std::future<Eigen::Vector2d> fut_kp_kv_ori   = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_ORI);
       std::future<Eigen::Vector2d> fut_kp_kv_joint = redis_client.get<Eigen::Vector2d>(KEY_KP_KV_JOINT);
-      std::future<Eigen::VectorXd> fut_x_des       = redis_client.get<Eigen::VectorXd>(KEY_CONTROL_POS_DES);
+      std::future<Eigen::Vector3d> fut_x_des       = redis_client.get<Eigen::Vector3d>(KEY_CONTROL_POS_DES);
+      std::future<Eigen::Vector4d> fut_quat_des    = redis_client.get<Eigen::Vector4d>(KEY_CONTROL_ORI_DES);
+      std::future<double> fut_max_err_pos = redis_client.get<double>(KEY_POS_ERR_MAX);
+      std::future<double> fut_max_err_ori = redis_client.get<double>(KEY_ORI_ERR_MAX);
 #ifdef USE_WEB_APP
       std::future<redis_gl::simulator::Interaction> fut_interaction =
           redis_client.get<redis_gl::simulator::Interaction>(redis_gl::simulator::KEY_INTERACTION);
@@ -355,6 +355,7 @@ int main(int argc, char* argv[]) {
 
       // Check for PUB commands
       x_des = fut_x_des.get();
+      quat_des = Eigen::Quaterniond(fut_quat_des.get());
       mtx_pub.lock();
       if (is_pub_available) {
         mtx_des.lock();
@@ -375,13 +376,17 @@ int main(int argc, char* argv[]) {
       Eigen::Vector3d x_err;
       const Eigen::Vector3d x = spatial_dyn::Position(ab, -1, ee_offset);
       const Eigen::Vector3d dx = J.topRows<3>() * ab.dq();
-      const Eigen::Vector3d ddx = ctrl_utils::PdControl(x, x_des, dx, fut_kp_kv_pos.get(), kMaxErrorPos, &x_err);
+      const Eigen::Vector3d ddx = ctrl_utils::PdControl(x, x_des, dx, fut_kp_kv_pos.get(),
+                                                        fut_max_err_pos.get(), &x_err);
 
       // Compute orientation PD control
       Eigen::Vector3d ori_err;
-      const Eigen::Quaterniond quat = ctrl_utils::NearQuaternion(spatial_dyn::Orientation(ab), quat_des);
+      const Eigen::Quaterniond quat = ctrl_utils::NearQuaternion(spatial_dyn::Orientation(ab), quat_0);
+      quat_0 = quat;
+      quat_des = ctrl_utils::NearQuaternion(quat_des, quat);
       const Eigen::Vector3d w = J.bottomRows<3>() * ab.dq();
-      const Eigen::Vector3d dw = ctrl_utils::PdControl(quat, quat_des, w, fut_kp_kv_ori.get(), kMaxErrorOri, &ori_err);
+      const Eigen::Vector3d dw = ctrl_utils::PdControl(quat, quat_des, w, fut_kp_kv_ori.get(),
+                                                       fut_max_err_ori.get(), &ori_err);
 
       // Compute opspace torques
       Eigen::MatrixXd N;
@@ -397,9 +402,9 @@ int main(int argc, char* argv[]) {
       }
 
       // Add joint task in nullspace
-      static const Eigen::MatrixXd I = Eigen::MatrixXd::Identity(ab.dof(), ab.dof());
+      static const Eigen::MatrixXd J_null = Eigen::MatrixXd::Identity(ab.dof() - 1, ab.dof());
       const Eigen::VectorXd ddq = ctrl_utils::PdControl(ab.q(), q_des, ab.dq(), fut_kp_kv_joint.get());
-      tau_cmd += spatial_dyn::opspace::InverseDynamics(ab, I, ddq, &N);
+      tau_cmd += spatial_dyn::opspace::InverseDynamics(ab, J_null, ddq.head(ab.dof() - 1), &N);
 
       // Add friction compensation
       tau_cmd += franka_panda::Friction(ab, tau_cmd);
@@ -416,13 +421,19 @@ int main(int argc, char* argv[]) {
       std::map<size_t, spatial_dyn::SpatialForced> f_ext;
       try {
         redis_gl::simulator::Interaction interaction = fut_interaction.get();
-        mtx_des.lock();
-        AdjustPosition(interaction.key_down, &x_des);
-        AdjustOrientation(interaction.key_down, &quat_des);
-        mtx_des.unlock();
+        if (!interaction.key_down.empty()) {
+          const Eigen::Vector3d x_adjust = redis_gl::simulator::KeypressPositionAdjustment(interaction);
+          const Eigen::AngleAxisd aa_adjust = redis_gl::simulator::KeypressOrientationAdjustment(interaction);
+          if (x_adjust != Eigen::Vector3d::Zero() || aa_adjust.angle() != 0.) {
+            mtx_des.lock();
+            x_des += x_adjust;
+            quat_des = aa_adjust * quat_des;
+            mtx_des.unlock();
+            is_pose_des_new = true;
+          }
+        }
 
-        f_ext = ComputeExternalForces(model_keys, ab, interaction);
-        is_pose_des_new = true;
+        f_ext = redis_gl::simulator::ComputeExternalForces(model_keys, ab, interaction);
       } catch (...) {}
 #endif  // USE_WEB_APP
 
@@ -489,67 +500,3 @@ int main(int argc, char* argv[]) {
 
   return 0;
 }
-
-namespace {
-
-#ifdef USE_WEB_APP
-std::map<size_t, spatial_dyn::SpatialForced> ComputeExternalForces(const redis_gl::simulator::ModelKeys& model_keys,
-                                                                   const spatial_dyn::ArticulatedBody& ab,
-                                                                   const redis_gl::simulator::Interaction& interaction) {
-  std::map<size_t, spatial_dyn::SpatialForced> f_ext;
-
-  // Check if the clicked object is the robot
-  if (interaction.key_object != model_keys.key_robots_prefix + ab.name) return f_ext;
-
-  // Get the click position in world coordinates
-  const Eigen::Vector3d pos_click_in_world = spatial_dyn::Position(ab, interaction.idx_link,
-                                                                   interaction.pos_click_in_link);
-
-  // Set the click force
-  const Eigen::Vector3d f = kGainClickDrag * (interaction.pos_mouse_in_world - pos_click_in_world);
-  spatial_dyn::SpatialForced f_click(f, Eigen::Vector3d::Zero());
-
-  // Translate the spatial force to the world frame
-  f_ext[interaction.idx_link] = Eigen::Translation3d(pos_click_in_world) * f_click;
-
-  return f_ext;
-}
-
-void AdjustPosition(const std::string& key, Eigen::Vector3d* pos) {
-  if (key.empty() || pos == nullptr) return;
-
-  size_t idx = 0;
-  int sign = 1;
-  switch (key[0]) {
-    case 'a': idx = 0; sign = -1; break;
-    case 'd': idx = 0; sign = 1; break;
-    case 'w': idx = 1; sign = 1; break;
-    case 's': idx = 1; sign = -1; break;
-    case 'e': idx = 2; sign = 1; break;
-    case 'q': idx = 2; sign = -1; break;
-    default: return;
-  }
-  (*pos)(idx) += sign * kGainKeyPressPos;
-}
-
-void AdjustOrientation(const std::string& key, Eigen::Quaterniond* quat) {
-  if (key.empty() || quat == nullptr) return;
-
-  size_t idx = 0;
-  int sign = 1;
-  switch (key[0]) {
-    case 'j': idx = 0; sign = -1; break;
-    case 'l': idx = 0; sign = 1; break;
-    case 'i': idx = 1; sign = 1; break;
-    case 'k': idx = 1; sign = -1; break;
-    case 'o': idx = 2; sign = 1; break;
-    case 'u': idx = 2; sign = -1; break;
-    default: return;
-  }
-  Eigen::AngleAxisd aa(sign * kGainKeyPressOri, Eigen::Vector3d::Unit(idx));
-  Eigen::Quaterniond quat_prev = *quat;
-  *quat = ctrl_utils::NearQuaternion((aa * quat_prev).normalized(), quat_prev);
-}
-#endif  // USE_WEB_APP
-
-}  // namespace
