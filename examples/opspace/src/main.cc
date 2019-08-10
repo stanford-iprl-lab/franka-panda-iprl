@@ -445,7 +445,19 @@ int main(int argc, char* argv[]) {
       Eigen::Vector3d ori_err;
       const Eigen::Quaterniond quat = ctrl_utils::NearQuaternion(spatial_dyn::Orientation(ab), quat_0);
       quat_0 = quat;
-      quat_des = ctrl_utils::NearQuaternion(quat_des, quat);
+      if (IsOrientationFeasible(ab, quat, quat_des)) {
+        quat_des = ctrl_utils::NearQuaternion(quat_des, quat);
+      } else {
+        if (is_pub_waiting) {
+          quat_des = quat;
+
+          redis_client.publish(KEY_PUB_STATUS, "infeasible");
+          is_pub_waiting = false;
+          std::cout << "PUB " << KEY_PUB_STATUS << ": infeasible" << std::endl;
+        } else {
+          quat_des = ctrl_utils::FarQuaternion(quat_des, quat);
+        }
+      }
       const Eigen::Vector3d w = J.bottomRows<3>() * ab.dq();
       const Eigen::Vector3d dw = ctrl_utils::PdControl(quat, quat_des, w, fut_kp_kv_ori.get(),
                                                        fut_max_err_ori.get(), &ori_err);
