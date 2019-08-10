@@ -18,10 +18,12 @@
 #include <string>     // std::string
 
 #include <spatial_dyn/spatial_dyn.h>
+#include <ctrl_utils/atomic.h>
 #include <ctrl_utils/control.h>
 #include <ctrl_utils/euclidian.h>
 #include <ctrl_utils/filesystem.h>
 #include <ctrl_utils/json.h>
+#include <ctrl_utils/optional.h>
 #include <ctrl_utils/redis_client.h>
 #include <ctrl_utils/timer.h>
 #include <franka_panda/articulated_body.h>
@@ -150,6 +152,89 @@ struct Args {
 
 };
 
+bool IsOrientationFeasible(const spatial_dyn::ArticulatedBody& ab,
+                           const Eigen::Quaterniond& quat, const Eigen::Quaterniond& quat_des) {
+  const Eigen::Quaterniond quat_des_near = ctrl_utils::NearQuaternion(quat_des, quat);
+  const Eigen::Quaterniond quat_des_to_ee = quat.inverse() * quat_des_near;
+  const Eigen::Vector3d aa_des_to_ee = ctrl_utils::OrientationError(Eigen::Quaterniond::Identity(), quat_des_to_ee);
+  const double q_min = ab.rigid_bodies(-1).joint().q_min();
+  const double q_max = ab.rigid_bodies(-1).joint().q_max();
+  const double q_des = ab.q(-1) - aa_des_to_ee(2);
+  return q_des > q_min && q_des < q_max;
+}
+
+bool IsPublishCommandTimedOut(const std::chrono::steady_clock::time_point& t_pub) {
+  const auto t_since_pub = std::chrono::steady_clock::now() - t_pub;
+  const auto ms_since_pub = std::chrono::duration_cast<std::chrono::milliseconds>(t_since_pub);
+  return ms_since_pub > kTimePubWait;
+}
+
+bool IsPoseConverged(const Eigen::Vector3d& x_err, const Eigen::Vector3d& ori_err,
+                     double epsilon_pos, double epsilon_ori) {
+  return x_err.norm() < epsilon_pos && ori_err.norm() < epsilon_ori;
+}
+
+bool IsVelocityConverged(const Eigen::Vector3d& dx, const Eigen::Vector3d& w,
+                         double epsilon_vel_pos, double epsilon_vel_ori) {
+  return dx.norm() < epsilon_vel_pos && w.norm() < epsilon_vel_ori;
+}
+
+struct PublishCommand {
+
+  enum class Type {
+    kUndefined,
+    kPose,
+    kDeltaPose
+  };
+
+  std::optional<Eigen::Vector3d> pos;
+  std::optional<Eigen::Quaterniond> quat;
+  Type type;
+
+  std::optional<double> pos_tolerance;
+  std::optional<double> ori_tolerance;
+
+};
+
+void from_json(const nlohmann::json& json, PublishCommand::Type& type) {
+  const std::string str_type = json.get<std::string>();
+  if (str_type == "pose") {
+    type = PublishCommand::Type::kPose;
+  } else if (str_type == "delta_pose") {
+    type = PublishCommand::Type::kDeltaPose;
+  } else {
+    type = PublishCommand::Type::kUndefined;
+  }
+}
+
+void from_json(const nlohmann::json& json, PublishCommand& command) {
+  if (json.find("type") != json.end()) {
+    command.type = json["type"].get<PublishCommand::Type>();
+  } else {
+    command.type = PublishCommand::Type::kUndefined;
+  }
+
+  if (json.find("pos") != json.end()) {
+    command.pos = json["pos"].get<Eigen::Vector3d>();
+  } else {
+    command.type = PublishCommand::Type::kUndefined;
+  }
+
+  if (json.find("quat") != json.end()) {
+    command.quat = Eigen::Quaterniond(json["quat"].get<Eigen::Vector4d>());
+  } else if (json.find("rot") != json.end()) {
+    command.quat = Eigen::Quaterniond(json["rot"].get<Eigen::Matrix3d>());
+  }
+
+  if (json.find("pos_tolerance") != json.end()) {
+    command.pos_tolerance = json["pos_tolerance"].get<double>();
+  }
+
+  if (json.find("ori_tolerance") != json.end()) {
+    command.pos_tolerance = json["ori_tolerance"].get<double>();
+  }
+}
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -198,13 +283,13 @@ int main(int argc, char* argv[]) {
   // ab.set_stiction_activations(Eigen::Vector3d(0.1, 0.1, 0.1));
 
   // Initialize controller parameters
-  Eigen::VectorXd q_des       = kQHome;
-  Eigen::Vector3d x_des       = spatial_dyn::Position(ab, -1, ee_offset);
-  Eigen::Quaterniond quat_des = spatial_dyn::Orientation(ab);
-  std::mutex mtx_des;
+  Eigen::VectorXd q_des = kQHome;
+
+  ctrl_utils::Atomic<std::pair<Eigen::Vector3d, Eigen::Quaterniond>> pose_des =
+      std::pair<Eigen::Vector3d, Eigen::Quaterniond>{ spatial_dyn::Position(ab, -1, ee_offset),
+                                                      spatial_dyn::Orientation(ab) };
 
   // Initialize Redis keys
-
 #ifdef USE_WEB_APP
   const std::filesystem::path path_resources = (std::filesystem::current_path() /
                                                 std::filesystem::path(args.path_urdf)).parent_path();
@@ -234,86 +319,58 @@ int main(int argc, char* argv[]) {
   redis_client.set(KEY_KP_KV_JOINT, kKpKvJoint);
   redis_client.set(KEY_POS_ERR_MAX, kMaxErrorPos);
   redis_client.set(KEY_ORI_ERR_MAX, kMaxErrorOri);
-  redis_client.set(KEY_CONTROL_POS_DES, x_des);
-  redis_client.set(KEY_CONTROL_ORI_DES, quat_des.coeffs());
+  redis_client.set(KEY_CONTROL_POS_DES, spatial_dyn::Position(ab, -1, kEeOffset));
+  redis_client.set(KEY_CONTROL_ORI_DES, spatial_dyn::Orientation(ab).coeffs());
   redis_client.sync_commit();
 
-  Eigen::Vector3d x_des_pub       = spatial_dyn::Position(ab, -1, ee_offset);
-  Eigen::Quaterniond quat_des_pub = spatial_dyn::Orientation(ab);
+  // Initialize subscriber variables
+  ctrl_utils::Atomic<std::pair<Eigen::Vector3d, Eigen::Quaterniond>> pose_des_pub = pose_des;
+  std::atomic_bool is_pub_available = { false };
   std::atomic<double> epsilon_pos = { kEpsilonPos };
   std::atomic<double> epsilon_ori = { kEpsilonOri };
-  bool is_pub_available = false;
-  bool is_pub_waiting = false;
-  std::mutex mtx_pub;
+
   redis_sub.subscribe(KEY_PUB_COMMAND,
-      [&mtx_des, &x_des, &quat_des, &mtx_pub, &x_des_pub, &quat_des_pub, &epsilon_pos,
-       &epsilon_ori, &is_pub_available](const std::string& key, const std::string& val) {
+      [&pose_des, &pose_des_pub, &is_pub_available, &epsilon_pos, &epsilon_ori](
+      const std::string& key, const std::string& val) {
     std::cout << "SUB " << key << ": " << val << std::endl;
-    try {
-      // Get current des pose
-      mtx_des.lock();
-      Eigen::Vector3d x = x_des;
-      Eigen::Quaterniond quat = quat_des;
-      mtx_des.unlock();
 
-      // Parse json command
-      nlohmann::json json_cmd = nlohmann::json::parse(val);
-      std::string type = json_cmd["type"].get<std::string>();
-      if (type == "pose") {
-        if (json_cmd.find("pos") != json_cmd.end()) {
-          x = json_cmd["pos"].get<Eigen::Vector3d>();
-        }
-        if (json_cmd.find("quat") != json_cmd.end()) {
-          quat.coeffs() = json_cmd["quat"].get<Eigen::Vector4d>();
-        } else if (json_cmd.find("rot") != json_cmd.end()) {
-          quat = json_cmd["rot"].get<Eigen::Matrix3d>();
-        }
-      } else if (type == "delta_pose") {
-        if (json_cmd.find("pos") != json_cmd.end()) {
-          x += json_cmd["pos"].get<Eigen::Vector3d>();
-        }
-        if (json_cmd.find("quat") != json_cmd.end()) {
-          Eigen::Quaterniond quat_delta;
-          quat_delta.coeffs() = json_cmd["quat"].get<Eigen::Vector4d>();
-          quat = quat * quat_delta;
-        } else if (json_cmd.find("rot") != json_cmd.end()) {
-          Eigen::Quaterniond quat_delta;
-          quat_delta = json_cmd["rot"].get<Eigen::Matrix3d>();
-          quat = quat * quat_delta;
-        }
-      }
-      if (json_cmd.find("pos_tolerance") != json_cmd.end()) {
-        epsilon_pos = json_cmd["pos_tolerance"].get<double>();
-      }
-      if (json_cmd.find("ori_tolerance") != json_cmd.end()) {
-        epsilon_ori = json_cmd["ori_tolerance"].get<double>();
-      }
+    // Get current des pose
+    Eigen::Vector3d x_des;
+    Eigen::Quaterniond quat_des;
+    std::tie(x_des, quat_des) = pose_des.load();
 
-      // Set pub des pose
-      mtx_pub.lock();
-      x_des_pub = x;
-      quat_des_pub = quat;
-      is_pub_available = true;
-      mtx_pub.unlock();
-    } catch (const std::exception& e) {
-      std::cerr << "cpp_redis::subscribe_callback(" << key << ", " << val << "): " << std::endl << e.what() << std::endl;
+    // Parse json command
+    const PublishCommand command = nlohmann::json::parse(val).get<PublishCommand>();
+    if (command.type == PublishCommand::Type::kPose) {
+      if (command.pos) x_des = *command.pos;
+      if (command.quat) quat_des = *command.quat;
+    } else if (command.type == PublishCommand::Type::kDeltaPose) {
+      if (command.pos) x_des += *command.pos;
+      if (command.quat) quat_des = quat_des * *command.quat;
+    } else {
+      std::cerr << "cpp_redis::subscribe_callback(" << key << ", " << val
+                << "): Invalid command type." << std::endl;
+      return;
     }
+    if (command.pos_tolerance) epsilon_pos = *command.pos_tolerance;
+    if (command.ori_tolerance) epsilon_ori = *command.ori_tolerance;
+
+    pose_des_pub = std::pair<Eigen::Vector3d, Eigen::Quaterniond>{ x_des, quat_des };
+    is_pub_available = true;
   });
   redis_sub.commit();
 
   // Get end-effector model from driver
   try {
-    nlohmann::json json_ee = redis_client.sync_get<nlohmann::json>(KEY_MODEL_EE);
-    double m_ee = json_ee["m"].get<double>();
-    Eigen::Vector3d com_ee = json_ee["com"].get<Eigen::Vector3d>();
-    Eigen::Vector6d I_com_ee = json_ee["I_com"].get<Eigen::Vector6d>();
-    ab.ReplaceLoad(spatial_dyn::SpatialInertiad(m_ee, com_ee, I_com_ee));
+    const nlohmann::json json_ee = redis_client.sync_get<nlohmann::json>(KEY_MODEL_EE);
+    ab.ReplaceLoad(json_ee.get<spatial_dyn::SpatialInertiad>());
   } catch (...) {}
 
   // Create signal handler
   std::signal(SIGINT, &stop);
 
   bool is_initialized = false;  // Flat to set control mode on first iteration
+  bool is_pub_waiting = false;
   auto t_pub = std::chrono::steady_clock::now();
   bool is_pose_des_new = true;
 
@@ -353,21 +410,26 @@ int main(int argc, char* argv[]) {
         redis_client.commit();
       }
 
+      // Update desired pose from Redis
+      Eigen::Vector3d x_des = fut_x_des.get();
+      Eigen::Quaterniond quat_des = Eigen::Quaterniond(fut_quat_des.get());
+
       // Check for PUB commands
-      x_des = fut_x_des.get();
-      quat_des = Eigen::Quaterniond(fut_quat_des.get());
-      mtx_pub.lock();
       if (is_pub_available) {
-        mtx_des.lock();
-        x_des    = x_des_pub;
-        quat_des = quat_des_pub;
-        mtx_des.unlock();
+        // Get desired pose from pub
+        std::tie(x_des, quat_des) = pose_des_pub.load();
         is_pub_available = false;
+
+        // Set flag to respond to pub
         is_pub_waiting = true;
-        is_pose_des_new = true;
         t_pub = std::chrono::steady_clock::now();
+
+        // Set flag to publish new desired pose
+        is_pose_des_new = true;
+      } else {
+        // Set desired pose for pub
+        pose_des = std::pair<Eigen::Vector3d, Eigen::Quaterniond>{ x_des, quat_des };
       }
-      mtx_pub.unlock();
 
       // Compute Jacobian
       const Eigen::Matrix6Xd& J = spatial_dyn::Jacobian(ab, -1, ee_offset);
@@ -396,8 +458,7 @@ int main(int argc, char* argv[]) {
         tau_cmd = spatial_dyn::opspace::InverseDynamics(ab, J.topRows<3>(), ddx, &N, {}, kOpspaceOptions);
       } else {
         // Control position and orientation
-        Eigen::Vector6d ddx_dw;
-        ddx_dw << ddx, dw;
+        const Eigen::Vector6d ddx_dw = (Eigen::Vector6d() << ddx, dw).finished();;
         tau_cmd = spatial_dyn::opspace::InverseDynamics(ab, J, ddx_dw, &N, {}, kOpspaceOptions);
       }
 
@@ -425,10 +486,8 @@ int main(int argc, char* argv[]) {
           const Eigen::Vector3d x_adjust = redis_gl::simulator::KeypressPositionAdjustment(interaction);
           const Eigen::AngleAxisd aa_adjust = redis_gl::simulator::KeypressOrientationAdjustment(interaction);
           if (x_adjust != Eigen::Vector3d::Zero() || aa_adjust.angle() != 0.) {
-            mtx_des.lock();
             x_des += x_adjust;
             quat_des = aa_adjust * quat_des;
-            mtx_des.unlock();
             is_pose_des_new = true;
           }
         }
@@ -454,11 +513,9 @@ int main(int argc, char* argv[]) {
       }
 
       // Send PUB command status
-      if (is_pub_waiting &&
-          ((x_err.norm() < epsilon_pos.load() && ori_err.norm() < epsilon_ori.load() &&
-            dx.norm() < kEpsilonVelPos && w.norm() < kEpsilonVelOri) ||
-           (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t_pub) > kTimePubWait &&
-            dx.norm() < kEpsilonVelPos && w.norm() < kEpsilonVelOri))) {
+      if (is_pub_waiting && IsVelocityConverged(dx, w, kEpsilonVelPos, kEpsilonVelOri) &&
+          (IsPoseConverged(x_err, ori_err, epsilon_pos.load(), epsilon_ori.load()) ||
+           IsPublishCommandTimedOut(t_pub))) {
         redis_client.publish(KEY_PUB_STATUS, "done");
         is_pub_waiting = false;
         std::cout << "PUB " << KEY_PUB_STATUS << ": done" << std::endl;

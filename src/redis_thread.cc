@@ -62,8 +62,8 @@ void RedisThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMemor
   nlohmann::json json_ee;
   json_ee["m"] = state.m_ee;
   json_ee["com"] = state.F_x_Cee;
-  json_ee["I_com"] = std::array<double, 6>{state.I_ee[0], state.I_ee[4], state.I_ee[8],
-                                           state.I_ee[1], state.I_ee[2], state.I_ee[5]};
+  json_ee["I_com_flat"] = std::array<double, 6>{state.I_ee[0], state.I_ee[4], state.I_ee[8],
+                                                state.I_ee[1], state.I_ee[2], state.I_ee[5]};
   redis_client.set(KEY_INERTIA_EE, json_ee.dump());
 
   redis_client.sync_commit();
