@@ -59,6 +59,9 @@ const std::string KEY_SENSOR_POS    = KEY_PREFIX + "sensor::pos";
 const std::string KEY_SENSOR_ORI    = KEY_PREFIX + "sensor::ori";
 const std::string KEY_MODEL_EE      = KEY_PREFIX + "model::inertia_ee";
 const std::string KEY_DRIVER_STATUS = KEY_PREFIX + "driver::status";
+const std::string KEY_COLLISION_ACTIVE = KEY_PREFIX + "collision::active";
+const std::string KEY_COLLISION_POS    = KEY_PREFIX + "collision::pos";
+const std::string KEY_COLLISION_KP_KV  = KEY_PREFIX + "collision::kp_kv";
 
 // SET keys
 const std::string KEY_CONTROL_TAU     = KEY_PREFIX + "control::tau";
@@ -90,7 +93,7 @@ const std::string KEY_ORI_ERR_MAX = KEY_PREFIX + "control::ori_err_max";
 // Controller parameters
 const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107);  // Without gripper
 const Eigen::Vector3d kFrankaGripperOffset  = Eigen::Vector3d(0., 0., 0.1034);
-const Eigen::Vector3d kRobotiqGripperOffset = Eigen::Vector3d(0., 0., 0.135);  // Ranges from 0.130 to 0.144
+const Eigen::Vector3d kRobotiqGripperOffset = Eigen::Vector3d(0., 0., 0.140);  // Ranges from 0.130 to 0.144
 const Eigen::VectorXd kQHome     = (Eigen::Vector7d() <<
                                     0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.).finished();
 const Eigen::Matrix32d kKpKvPos  = (Eigen::Matrix32d() <<
@@ -119,12 +122,6 @@ const spatial_dyn::opspace::InverseDynamicsOptions kOpspaceOptions = []() {
   return options;
 }();
 
-const spatial_dyn::IntegrationOptions kIntegrationOptions = []() {
-  spatial_dyn::IntegrationOptions options;
-  options.friction = true;
-  return options;
-}();
-
 struct Args {
 
   Args(int argc, char* argv[]) {
@@ -138,6 +135,8 @@ struct Args {
       } else if (arg == "--robotiq") {
         robotiq = true;
         gripper = false;
+      } else if (arg == "--no-friction") {
+        friction = false;
       } else if (idx_required == 0) {
         path_urdf = arg;
         idx_required++;
@@ -149,6 +148,7 @@ struct Args {
   bool sim = false;
   bool gripper = true;
   bool robotiq = false;
+  bool friction = true;
 
 };
 
@@ -235,6 +235,29 @@ void from_json(const nlohmann::json& json, PublishCommand& command) {
   }
 }
 
+Eigen::Vector3d CollisionAvoidance(const Eigen::Vector3d& x, const Eigen::Vector3d x_collision,
+                                   const Eigen::Vector3d& dx, const Eigen::Vector2d& kp_kv_collision) {
+  Eigen::Vector3d x_collision_err = x - x_collision;
+  const Eigen::Vector3d dir_collision = -x_collision_err.normalized();
+  if (x_collision_err.norm() > 0.1) {
+    // Normalize collision error for safety
+    x_collision_err = 0.1 * x_collision_err.normalized();
+  }
+  const double dx_dot_dir_collision = dx.dot(dir_collision);
+  Eigen::Vector3d ddx_collision = Eigen::Vector3d::Zero();
+  if (dx_dot_dir_collision > 0.) {
+    // Decelerate if velocity is in the direction of collision
+    ddx_collision += -kp_kv_collision(1) * dx_dot_dir_collision * dir_collision;
+  }
+  // Repulsive field if ee is penetrating
+  ddx_collision += -kp_kv_collision(0) * x_collision_err;
+  // Normalize acceleration for safety
+  if (ddx_collision.norm() > 10.) {
+    ddx_collision = ddx_collision.normalized();
+  }
+  return ddx_collision;
+}
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -243,6 +266,9 @@ int main(int argc, char* argv[]) {
             << std::endl;
 
   const Args args(argc, argv);
+
+  spatial_dyn::IntegrationOptions integration_options;
+  integration_options.friction = args.friction;
 
   // Create timer and Redis client
   ctrl_utils::Timer timer(kTimerFreq);
@@ -306,21 +332,28 @@ int main(int argc, char* argv[]) {
   x_des_marker.geometry.type = spatial_dyn::Graphics::Geometry::Type::kSphere;
   x_des_marker.geometry.radius = 0.01;
   redis_gl::simulator::RegisterObject(redis_client, model_keys, x_des_marker, KEY_CONTROL_POS_DES, KEY_CONTROL_ORI_DES);
+  spatial_dyn::Graphics x_collision_marker("x_collision_marker");
+  x_collision_marker.geometry.type = spatial_dyn::Graphics::Geometry::Type::kSphere;
+  x_collision_marker.geometry.radius = 0.01;
+  redis_gl::simulator::RegisterObject(redis_client, model_keys, x_collision_marker, KEY_COLLISION_POS, KEY_CONTROL_ORI_DES);
 #endif  // USE_WEB_APP
 
   if (args.sim) {
     redis_client.set(KEY_SENSOR_Q, ab.q());
     redis_client.set(KEY_SENSOR_DQ, ab.dq());
   }
-  redis_client.set(KEY_SENSOR_POS, spatial_dyn::Position(ab, -1, kEeOffset));
+  redis_client.set(KEY_SENSOR_POS, spatial_dyn::Position(ab, -1, ee_offset));
   redis_client.set(KEY_SENSOR_ORI, spatial_dyn::Orientation(ab).coeffs());
   redis_client.set(KEY_KP_KV_POS, kKpKvPos);
   redis_client.set(KEY_KP_KV_ORI, kKpKvOri);
   redis_client.set(KEY_KP_KV_JOINT, kKpKvJoint);
   redis_client.set(KEY_POS_ERR_MAX, kMaxErrorPos);
   redis_client.set(KEY_ORI_ERR_MAX, kMaxErrorOri);
-  redis_client.set(KEY_CONTROL_POS_DES, spatial_dyn::Position(ab, -1, kEeOffset));
+  redis_client.set(KEY_CONTROL_POS_DES, spatial_dyn::Position(ab, -1, ee_offset));
   redis_client.set(KEY_CONTROL_ORI_DES, spatial_dyn::Orientation(ab).coeffs());
+  redis_client.set(KEY_COLLISION_ACTIVE, false);
+  redis_client.set(KEY_COLLISION_POS, Eigen::Vector3d(0.37, 0., 0.3));
+  redis_client.set(KEY_COLLISION_KP_KV, Eigen::Vector2d(0., 100.));
   redis_client.sync_commit();
 
   // Initialize subscriber variables
@@ -389,6 +422,7 @@ int main(int argc, char* argv[]) {
       std::future<Eigen::Vector4d> fut_quat_des    = redis_client.get<Eigen::Vector4d>(KEY_CONTROL_ORI_DES);
       std::future<double> fut_max_err_pos = redis_client.get<double>(KEY_POS_ERR_MAX);
       std::future<double> fut_max_err_ori = redis_client.get<double>(KEY_ORI_ERR_MAX);
+      std::future<bool> fut_is_collision_active = redis_client.get<bool>(KEY_COLLISION_ACTIVE);
 #ifdef USE_WEB_APP
       std::future<redis_gl::simulator::Interaction> fut_interaction =
           redis_client.get<redis_gl::simulator::Interaction>(redis_gl::simulator::KEY_INTERACTION);
@@ -407,6 +441,15 @@ int main(int argc, char* argv[]) {
         ab.set_q(fut_q.get());
         ab.set_dq(fut_dq.get());
       } else {
+        redis_client.commit();
+      }
+
+      std::future<Eigen::Vector3d> fut_x_collision;
+      std::future<Eigen::Vector2d> fut_kp_kv_collision;
+      const bool is_collision_active = fut_is_collision_active.get();
+      if (is_collision_active) {
+        fut_x_collision = redis_client.get<Eigen::Vector3d>(KEY_COLLISION_POS);
+        fut_kp_kv_collision = redis_client.get<Eigen::Vector2d>(KEY_COLLISION_KP_KV);
         redis_client.commit();
       }
 
@@ -438,8 +481,11 @@ int main(int argc, char* argv[]) {
       Eigen::Vector3d x_err;
       const Eigen::Vector3d x = spatial_dyn::Position(ab, -1, ee_offset);
       const Eigen::Vector3d dx = J.topRows<3>() * ab.dq();
-      const Eigen::Vector3d ddx = ctrl_utils::PdControl(x, x_des, dx, fut_kp_kv_pos.get(),
-                                                        fut_max_err_pos.get(), &x_err);
+      Eigen::Vector3d ddx = ctrl_utils::PdControl(x, x_des, dx, fut_kp_kv_pos.get(),
+                                                  fut_max_err_pos.get(), &x_err);
+      if (is_collision_active) {
+        ddx += CollisionAvoidance(x, fut_x_collision.get(), dx, fut_kp_kv_collision.get());
+      }
 
       // Compute orientation PD control
       Eigen::Vector3d ori_err;
@@ -480,7 +526,9 @@ int main(int argc, char* argv[]) {
       tau_cmd += spatial_dyn::opspace::InverseDynamics(ab, J_null, ddq.head(ab.dof() - 1), &N);
 
       // Add friction compensation
-      tau_cmd += franka_panda::Friction(ab, tau_cmd);
+      if (args.friction) {
+        tau_cmd += franka_panda::Friction(ab, tau_cmd);
+      }
 
       // Add gravity compensation
       tau_cmd += spatial_dyn::Gravity(ab);
@@ -511,9 +559,9 @@ int main(int argc, char* argv[]) {
       if (args.sim) {
         // Integrate
 #ifdef USE_WEB_APP
-        spatial_dyn::Integrate(ab, tau_cmd, timer.dt(), f_ext, kIntegrationOptions);
+        spatial_dyn::Integrate(ab, tau_cmd, timer.dt(), f_ext, integration_options);
 #else  // USE_WEB_APP
-        spatial_dyn::Integrate(ab, tau_cmd, timer.dt(), {}, kIntegrationOptions);
+        spatial_dyn::Integrate(ab, tau_cmd, timer.dt(), {}, integration_options);
 #endif  // USE_WEB_APP
 
         redis_client.set(KEY_SENSOR_Q, ab.q());
