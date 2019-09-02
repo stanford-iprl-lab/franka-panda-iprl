@@ -311,6 +311,11 @@ int main(int argc, char* argv[]) {
   // Initialize controller parameters
   Eigen::VectorXd q_des = kQHome;
 
+  // Desired pose needs to be locked when written by main thread or read by
+  // Redis subscribe thread
+  // std::mutex mtx_des;
+  // Eigen::Vector3d x_des       = spatial_dyn::Position(ab, -1, ee_offset);
+  // Eigen::Quaterniond quat_des = spatial_dyn::Orientation(ab);
   ctrl_utils::Atomic<std::pair<Eigen::Vector3d, Eigen::Quaterniond>> pose_des =
       std::pair<Eigen::Vector3d, Eigen::Quaterniond>{ spatial_dyn::Position(ab, -1, ee_offset),
                                                       spatial_dyn::Orientation(ab) };
