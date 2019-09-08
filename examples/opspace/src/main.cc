@@ -28,7 +28,7 @@
 #include <ctrl_utils/timer.h>
 #include <franka_panda/articulated_body.h>
 
-// #define USE_WEB_APP
+#define USE_WEB_APP
 
 #ifdef USE_WEB_APP
 #include <redis_gl/redis_gl.h>
@@ -93,7 +93,7 @@ const std::string KEY_ORI_ERR_MAX = KEY_PREFIX + "control::ori_err_max";
 // Controller parameters
 const Eigen::Vector3d kEeOffset  = Eigen::Vector3d(0., 0., 0.107);  // Without gripper
 const Eigen::Vector3d kFrankaGripperOffset  = Eigen::Vector3d(0., 0., 0.1034);
-const Eigen::Vector3d kRobotiqGripperOffset = Eigen::Vector3d(0., 0., 0.140);  // Ranges from 0.130 to 0.144
+const Eigen::Vector3d kRobotiqGripperOffset = Eigen::Vector3d(0., 0., 0.144);  // Ranges from 0.130 to 0.144
 const Eigen::VectorXd kQHome     = (Eigen::Vector7d() <<
                                     0., -M_PI/6., 0., -5.*M_PI/6., 0., 2.*M_PI/3., 0.).finished();
 const Eigen::Matrix32d kKpKvPos  = (Eigen::Matrix32d() <<
