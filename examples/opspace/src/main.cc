@@ -113,6 +113,8 @@ const double kEpsilonOri         = 0.2;
 const double kEpsilonVelPos      = 0.005;
 const double kEpsilonVelOri      = 0.005;
 const double kMaxForce           = 100.;
+const Eigen::Array3d kMinPos     = Eigen::Array3d(0.2, -0.4, 0.01);
+const Eigen::Array3d kMaxPos     = Eigen::Array3d(0.7, 0.4, 0.5);
 const std::chrono::milliseconds kTimePubWait = std::chrono::milliseconds{1000};
 
 const spatial_dyn::opspace::InverseDynamicsOptions kOpspaceOptions = []() {
@@ -460,6 +462,8 @@ int main(int argc, char* argv[]) {
 
       // Update desired pose from Redis
       Eigen::Vector3d x_des = fut_x_des.get();
+      x_des = (x_des.array() < kMinPos).select(kMinPos, x_des);
+      x_des = (x_des.array() > kMaxPos).select(kMaxPos, x_des);
       Eigen::Quaterniond quat_des = Eigen::Quaterniond(fut_quat_des.get());
 
       // Check for PUB commands
