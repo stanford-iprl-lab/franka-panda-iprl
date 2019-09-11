@@ -60,7 +60,7 @@ void RedisThread(std::shared_ptr<const Args> p_args, std::shared_ptr<SharedMemor
   redis_client.set(KEY_DTAU, ArrayToString(state.dtau_J, args.use_json));
   redis_client.set(KEY_POSE, ArrayToString(model->pose(franka::Frame::kEndEffector, state), args.use_json));
   nlohmann::json json_ee;
-  json_ee["m"] = state.m_ee;
+  json_ee["mass"] = state.m_ee;
   json_ee["com"] = state.F_x_Cee;
   json_ee["I_com_flat"] = std::array<double, 6>{state.I_ee[0], state.I_ee[4], state.I_ee[8],
                                                 state.I_ee[1], state.I_ee[2], state.I_ee[5]};

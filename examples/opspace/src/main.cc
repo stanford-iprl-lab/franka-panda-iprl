@@ -339,6 +339,10 @@ int main(int argc, char* argv[]) {
   x_des_marker.geometry.type = spatial_dyn::Graphics::Geometry::Type::kSphere;
   x_des_marker.geometry.radius = 0.01;
   redis_gl::simulator::RegisterObject(redis_client, model_keys, x_des_marker, KEY_CONTROL_POS_DES, KEY_CONTROL_ORI_DES);
+  spatial_dyn::Graphics x_control_marker("x_control_marker");
+  x_control_marker.geometry.type = spatial_dyn::Graphics::Geometry::Type::kSphere;
+  x_control_marker.geometry.radius = 0.01;
+  redis_gl::simulator::RegisterObject(redis_client, model_keys, x_control_marker, KEY_CONTROL_POS, KEY_CONTROL_ORI);
   spatial_dyn::Graphics x_collision_marker("x_collision_marker");
   x_collision_marker.geometry.type = spatial_dyn::Graphics::Geometry::Type::kSphere;
   x_collision_marker.geometry.radius = 0.01;
@@ -349,7 +353,7 @@ int main(int argc, char* argv[]) {
     redis_client.set(KEY_SENSOR_Q, ab.q());
     redis_client.set(KEY_SENSOR_DQ, ab.dq());
   }
-  redis_client.set(KEY_SENSOR_POS, spatial_dyn::Position(ab, -1, ee_offset));
+  redis_client.set(KEY_SENSOR_POS, spatial_dyn::Position(ab, -1, kEeOffset));
   redis_client.set(KEY_SENSOR_ORI, spatial_dyn::Orientation(ab).coeffs());
   redis_client.set(KEY_KP_KV_POS, kKpKvPos);
   redis_client.set(KEY_KP_KV_ORI, kKpKvOri);
