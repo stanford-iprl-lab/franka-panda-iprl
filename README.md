@@ -2,6 +2,7 @@ Franka Panda
 ============
 Redis driver for the Franka Panda.
 
+**NOTE:** The `master` branch was last tested on Ubuntu 16.04 on 11/10/2020.
 
 Installation
 ------------
@@ -26,6 +27,22 @@ This driver has been tested on Ubuntu 16.04 with C++14.
    mkdir build
    cd build
    cmake ..
+   make
+   ```
+
+4. If you run into an error during the cmake step, try installing the following:
+
+   ```
+   sudo apt install doxygen python3-dev
+   ```
+
+   Then clear the `build` folder and re-run cmake.
+
+5. If you want to use the python wrapper for this library, run cmake with the
+   following option:
+
+   ```
+   cmake .. -DFRANKA_PANDA_BUILD_PYTHON
    make
    ```
 
