@@ -63,10 +63,10 @@ if (NOT Franka_FOUND)
     find_package(Franka 0.6.0 REQUIRED PATHS ${CMAKE_BINARY_DIR}/libfranka/build)
 endif()
 
-find_package(ctrl_utils 1.1.0 QUIET)
+find_package(ctrl_utils 1.2.0 QUIET)
 if(NOT ctrl_utils_FOUND)
-    download_package(ctrl_utils 1.1.0)
-    find_package(ctrl_utils 1.1.0 REQUIRED)
+    download_package(ctrl_utils 1.2.0)
+    find_package(ctrl_utils 1.2.0 REQUIRED)
 endif()
 
 target_link_libraries(${FRANKA_PANDA_BIN}
