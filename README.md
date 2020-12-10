@@ -13,11 +13,16 @@ This driver has been tested on Ubuntu 16.04 with C++14.
    [this page](https://frankaemika.github.io/docs/getting_started.html).
    Connect your computer to the robot controller (not the robot directly).
 
-2. CMake 3.6 or higher is required to download the external dependencies. Ubuntu
+2. CMake 3.11 or higher is required to download the external dependencies. Ubuntu
    16.04 comes with CMake 3.5. The easiest way to upgrade is through pip:
 
    ```
    pip install cmake
+   ```
+
+3. Install dependencies
+   ```
+   sudo apt install libpoco-dev
    ```
 
 3. Build the driver

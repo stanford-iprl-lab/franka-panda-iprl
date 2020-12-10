@@ -1,5 +1,5 @@
 ############################################################
-# CMake config for the FrankaPanda library
+# CMake config for the FrankaPanda library.
 #
 # Copyright 2018. All Rights Reserved.
 #
@@ -7,13 +7,11 @@
 # Authors: Toki Migimatsu
 ############################################################
 
-get_filename_component(FRANKA_PANDA_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
-list(APPEND CMAKE_MODULE_PATH ${FRANKA_PANDA_CMAKE_DIR})
-find_dependency(Eigen3 3.3.5 REQUIRED)
-list(REMOVE_AT CMAKE_MODULE_PATH -1)
+set(LIB_NAME @LIB_NAME@)
+set(LIB_BINARY_DIR @PROJECT_BINARY_DIR@)
 
-if(NOT TARGET franka_panda::franka_panda)
-    include("${FRANKA_PANDA_CMAKE_DIR}/franka_pandaTargets.cmake")
+if(NOT TARGET ${LIB_NAME}::${LIB_NAME})
+    include("${LIB_BINARY_DIR}/${LIB_NAME}Targets.cmake")
 endif()

@@ -11,7 +11,7 @@
 #include <exception>   // std::runtime_error
 #include <iostream>    // std::cout, std::cerr
 #include <memory>      // std::shared_ptr
-#include <signal.h>    // signal, sig_atomic_t, SIGINT
+#include <csignal>     // std::signal, std::sig_atomic_t, SIGINT
 #include <thread>      // std::thread
 
 #include <franka/exception.h>
@@ -26,7 +26,7 @@
 
 namespace {
 
-volatile sig_atomic_t g_runloop = true;
+volatile std::sig_atomic_t g_runloop = true;
 void stop(int signal) { g_runloop = false; }
 
 }  // namespace
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
     franka::RobotState state_init = robot.readOnce();
 
     // Set ctrl-c handler
-    signal(SIGINT, stop);
+    std::signal(SIGINT, stop);
 
     // Create communication interface between Redis and robot threads
     auto globals = std::make_shared<franka_driver::SharedMemory>();

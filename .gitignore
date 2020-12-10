@@ -1,6 +1,6 @@
 bin/*
 build/*
-external/*
+lib/*
 *.egg-info/
 compile_commands.json
 *.swp

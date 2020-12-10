@@ -112,4 +112,4 @@ std::stringstream& operator<<(std::stringstream& ss, ControlStatus status) {
   return ss;
 }
 
-}  // namespace FrankaDriver
+}  // namespace franka_driver
