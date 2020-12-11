@@ -44,8 +44,18 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 # Standardize install directories.
 include(GNUInstallDirs)
 
+if(${LIB_CMAKE_NAME}_BUILD_PYTHON)
+    option(CTRL_UTILS_BUILD_PYTHON "Build Python wrapper for ctrl_utils" ON)
+    option(SPATIAL_DYN_BUILD_PYTHON "Build Python wrapper for spatial_dyn" ON)
+endif()
+
 # Build the library.
 add_subdirectory(src)
+
+# Build a Python wrapper for the library.
+if(${LIB_CMAKE_NAME}_BUILD_PYTHON)
+    add_subdirectory(python)
+endif()
 
 # Build examples.
 if(${LIB_CMAKE_NAME}_BUILD_EXAMPLES)

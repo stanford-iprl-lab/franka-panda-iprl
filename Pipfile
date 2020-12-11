@@ -6,10 +6,7 @@ name = "pypi"
 [dev-packages]
 
 [packages]
-numpy = "*"
 redis = "*"
 frankapanda = {editable = true, path = "."}
-ctrlutils = {git = "https://github.com/tmigimatsu/ctrl-utils.git", editable = true}
-# spatialdyn = {editable = true, git = "https://bitbucket.org/tmigimatsu/spatial-dyn.git"}
 
 [requires]

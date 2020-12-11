@@ -39,7 +39,7 @@ target_sources(${LIB_NAME}
 
 # Link internal model library.
 find_library(FCI_MODELS_LIB fcimodels REQUIRED PATHS ${LIB_EXTERNAL_DIR})
-lib_add_subdirectory(ctrl_utils)
+lib_add_subdirectory(ctrl_utils INCLUDE_ALL_TARGETS)
 ctrl_utils_add_subdirectory(Eigen3)
 ctrl_utils_add_subdirectory(nlohmann_json)
 target_link_libraries(${LIB_NAME}
@@ -50,11 +50,6 @@ target_link_libraries(${LIB_NAME}
     ${FCI_MODELS_LIB}
     nlohmann_json::nlohmann_json
 )
-
-# Build Python wrapper.
-if(FRANKA_PANDA_BUILD_PYTHON)
-    add_subdirectory(python)
-endif()
 
 # Create the Franka Panda driver.
 add_executable(${BIN_NAME} "")

@@ -6,5 +6,7 @@ setup(
     description="Python bindings for Franka Panda dynamics.",
     license="MIT",
     author="Toki Migimatsu",
-    packages=["frankapanda"]
+    packages=["frankapanda", "spatialdyn", "ctrlutils"],
+    package_dir={"": "lib"},
+    install_requires=["numpy"],
 )
