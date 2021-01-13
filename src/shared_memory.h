@@ -13,7 +13,7 @@
 
 #include <atomic>    // std::atomic
 #include <array>     // std::array
-#include <signal.h>  // sig_atomic_t
+#include <csignal>   // std::sig_atomic_t
 
 #include "control_thread.h"
 
@@ -38,7 +38,7 @@ struct SharedMemory {
   std::atomic<ControlMode> control_mode     = {ControlMode::FLOATING};
   std::atomic<ControlStatus> control_status = {ControlStatus::FINISHED};
 
-  volatile sig_atomic_t* runloop = nullptr;
+  volatile std::sig_atomic_t* runloop = nullptr;
 };
 
 }  // namespace franka_driver

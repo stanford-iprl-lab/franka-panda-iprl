@@ -1,0 +1,12 @@
+[submodule "external/Franka/libfranka.git"]
+	path = external/Franka/libfranka.git
+	url = https://github.com/frankaemika/libfranka.git
+[submodule "external/ctrl_utils/ctrl-utils.git"]
+	path = external/ctrl_utils/ctrl-utils.git
+	url = https://github.com/tmigimatsu/ctrl-utils.git
+[submodule "external/spatial_dyn/spatial-dyn.git"]
+	path = external/spatial_dyn/spatial-dyn.git
+	url = https://github.com/tmigimatsu/spatial-dyn.git
+[submodule "external/redis_gl/redis-gl.git"]
+	path = external/redis_gl/redis-gl.git
+	url = https://github.com/tmigimatsu/redis-gl.git
